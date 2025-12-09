@@ -1,0 +1,571 @@
+/* ============================================
+   PDF PREVIEW - Format A4 style POGE
+   Reproduit la mise en page du modèle
+   ============================================ */
+
+.pdf-preview-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #4a5568;
+  overflow: hidden;
+}
+
+.pdf-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: #2d3748;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  gap: 12px;
+}
+
+.pdf-preview-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refresh-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: rotate(180deg);
+}
+
+/* Contrôles de zoom */
+.pdf-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.zoom-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  transition: all 0.15s;
+}
+
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.zoom-btn:active {
+  transform: scale(0.95);
+}
+
+.zoom-btn.reset {
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+.zoom-level {
+  min-width: 50px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+.pdf-preview-hint {
+  font-size: 0.7rem;
+  color: #a0aec0;
+  background: #4a5568;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.pdf-preview-scroll {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: scroll; /* Force le scroll vertical */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  min-height: 0; /* Important pour flex */
+}
+
+/* ============================================
+   PAGE A4 - Proportions exactes 210x297mm
+   ============================================ */
+
+.pdf-page {
+  /* Dimensions A4 en pixels (72dpi) */
+  width: 595px;
+  height: 842px;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  position: relative;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #000;
+  transform-origin: top center;
+  /* Scale et margin-bottom gérés dynamiquement via style inline */
+  flex-shrink: 0;
+}
+
+/* ============================================
+   EN-TÊTE GAUCHE (colonne praticiens)
+   ============================================ */
+
+.pdf-header-left {
+  position: absolute;
+  left: 15px;
+  top: 42px;
+  width: 145px;
+  text-align: center;
+}
+
+.pdf-logo {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.pdf-logo img {
+  width: 100px;
+  height: auto;
+}
+
+.pdf-logo-placeholder {
+  width: 100px;
+  height: 100px;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #666;
+  margin: 0 auto;
+}
+
+.pdf-slogan {
+  font-size: 8px;
+  color: #0052a3;
+  margin-bottom: 14px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.pdf-team-list {
+  margin-top: 8px;
+}
+
+.pdf-loading {
+  font-size: 8px;
+  color: #999;
+  text-align: center;
+}
+
+.pdf-team-member {
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.pdf-member-name {
+  font-weight: bold;
+  font-size: 10px;
+  color: #000;
+  font-family: Arial, sans-serif;
+}
+
+.pdf-member-title {
+  font-size: 9px;
+  color: #000;
+  font-family: Arial, sans-serif;
+}
+
+.pdf-member-cert {
+  font-size: 8px;
+  color: #000;
+  font-family: Arial, sans-serif;
+}
+
+.pdf-member-rme {
+  font-size: 8px;
+  color: #000;
+  font-family: Arial, sans-serif;
+}
+
+/* ============================================
+   CONTENU PRINCIPAL (à droite)
+   ============================================ */
+
+.pdf-main-content {
+  margin-left: 170px;
+  margin-right: 42px;
+  margin-top: 42px;
+  padding-bottom: 70px;
+  min-height: calc(842px - 112px);
+}
+
+.pdf-date {
+  text-align: right;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+/* Bloc d'adresse destinataire selon norme DIN 5008:2020 */
+/* - Distance bord supérieur : 4,5 cm */
+/* - Largeur : 8,5-9 cm */
+/* - Hauteur max : 4,5 cm (9 lignes) */
+/* - Aligné à droite pour courrier professionnel */
+.pdf-destinataire {
+  font-size: 11px;
+  margin-top: 45px;  /* 4,5 cm depuis le haut */
+  margin-bottom: 45px; /* Espace après le bloc */
+  min-height: 45px;
+  max-height: 50px;
+  text-align: right;
+  max-width: 255px;  /* ~9 cm */
+  margin-left: auto;
+  padding-right: 5px;
+}
+
+.pdf-objet {
+  font-size: 11px;
+  margin-bottom: 22px;
+}
+
+.pdf-patient-name {
+  color: #0052a3;
+}
+
+.pdf-placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.pdf-to-fill {
+  color: #dc2626;
+  font-weight: normal;
+}
+
+.pdf-introduction {
+  font-size: 11px;
+  margin-bottom: 22px;
+  text-align: justify;
+}
+
+/* ============================================
+   CONTENU DU RAPPORT
+   ============================================ */
+
+.pdf-content {
+  margin-bottom: 28px;
+}
+
+.pdf-consultation-title {
+  margin-top: 17px;
+  margin-bottom: 11px;
+}
+
+.pdf-consultation-title strong {
+  font-size: 12px;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.pdf-title-line {
+  height: 1px;
+  background: #000;
+  margin-top: 3px;
+}
+
+.pdf-subtitle {
+  font-size: 11px;
+  margin-top: 11px;
+  margin-bottom: 6px;
+}
+
+.pdf-subtitle em {
+  font-style: italic;
+}
+
+.pdf-section-title {
+  font-size: 11px;
+  font-weight: bold;
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+.pdf-paragraph {
+  font-size: 11px;
+  margin-bottom: 6px;
+  text-align: justify;
+  line-height: 1.5;
+}
+
+.pdf-bullet {
+  font-size: 11px;
+  margin-bottom: 4px;
+  padding-left: 8px;
+  line-height: 1.4;
+}
+
+.pdf-bold {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.pdf-spacer {
+  height: 8px;
+}
+
+.pdf-empty-content {
+  padding: 56px 28px;
+  text-align: center;
+}
+
+.pdf-placeholder-text {
+  color: #999;
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* ============================================
+   SIGNATURE
+   ============================================ */
+
+.pdf-signature {
+  margin-top: 28px;
+}
+
+/* Lignes de signature personnalisées */
+.pdf-signature-line {
+  font-size: 10px;
+  color: #000;
+  line-height: 1.5;
+}
+
+.pdf-signature-line.name {
+  font-weight: bold;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.pdf-signature-line.email {
+  color: #0052a3;
+  margin-top: 3px;
+}
+
+.pdf-signature-line.email a {
+  color: #0052a3;
+  text-decoration: none;
+}
+
+.pdf-signature-line.email a:hover {
+  text-decoration: underline;
+}
+
+.pdf-signature-line.rme {
+  font-size: 9px;
+  color: #666;
+}
+
+/* Signature par défaut (fallback) */
+.pdf-author-name {
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.pdf-author-title {
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.pdf-author-email {
+  font-size: 10px;
+  color: #0052a3;
+  margin-top: 3px;
+}
+
+.pdf-author-email a {
+  color: #0052a3;
+  text-decoration: none;
+}
+
+.pdf-author-email a:hover {
+  text-decoration: underline;
+}
+
+.pdf-author-website {
+  font-size: 10px;
+  color: #0052a3;
+  margin-top: 2px;
+}
+
+.pdf-author-website a {
+  color: #0052a3;
+  text-decoration: none;
+}
+
+.pdf-author-website a:hover {
+  text-decoration: underline;
+}
+
+/* Logo cliquable */
+.pdf-logo-link {
+  display: block;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.pdf-logo-link:hover {
+  opacity: 0.8;
+}
+
+/* ============================================
+   PIED DE PAGE
+   ============================================ */
+
+.pdf-footer {
+  position: absolute;
+  bottom: 28px;
+  left: 28px;
+  right: 42px;
+  font-size: 8px;
+  color: #666;
+  font-family: Arial, sans-serif;
+}
+
+/* Classes pour l'alignement du pied de page */
+.pdf-footer.align-left {
+  text-align: left;
+}
+
+.pdf-footer.align-center {
+  text-align: center;
+}
+
+.pdf-footer.align-right {
+  text-align: right;
+}
+
+.pdf-footer-content {
+  display: flex;
+  justify-content: flex-start;
+  gap: 20px;
+  margin-bottom: 3px;
+}
+
+.pdf-footer-content a {
+  color: #0052a3;
+  text-decoration: none;
+}
+
+.pdf-footer-content a:hover {
+  text-decoration: underline;
+}
+
+.pdf-link {
+  color: #0052a3;
+}
+
+.pdf-link a {
+  color: #0052a3;
+}
+
+/* Pied de page avec mise en forme personnalisée */
+.pdf-footer-line {
+  white-space: pre-wrap;
+  margin-bottom: 2px;
+  display: block;
+  width: 100%;
+}
+
+.pdf-footer-line:last-child {
+  margin-bottom: 0;
+}
+
+.pdf-footer .footer-link {
+  color: #0052a3;
+  text-decoration: none;
+}
+
+.pdf-footer .footer-link:hover {
+  text-decoration: underline;
+}
+
+.pdf-footer .page-num {
+  color: #999;
+  font-style: italic;
+}
+
+.pdf-page-num {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+
+/* Scale géré dynamiquement via JavaScript */
+
+/* ============================================
+   PAGE 2 (VERSO)
+   ============================================ */
+
+.pdf-page-2 {
+  margin-top: 0; /* Gap géré par le conteneur parent */
+}
+
+.pdf-team-continued {
+  margin-top: 12px;
+  padding: 8px;
+  text-align: center;
+  color: #0052a3;
+  font-size: 8px;
+  border-top: 1px dotted #ccc;
+}
+
+.pdf-page2-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 60px;
+}
+
+.pdf-page2-info {
+  font-size: 10px;
+  color: #666;
+  text-align: center;
+  background: #f8f9fa;
+  padding: 16px 24px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}

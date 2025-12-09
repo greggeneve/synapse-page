@@ -1,0 +1,481 @@
+/* SignatureSelector.css - Styles pour le sélecteur de signatures */
+
+.signature-selector {
+  background: var(--color-bg-alt, #f8fafc);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.signature-selector.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted, #64748b);
+  font-size: 14px;
+}
+
+.signature-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.signature-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  margin: 0;
+}
+
+.btn-manage {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--color-primary, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-manage:hover {
+  background: var(--color-primary-dark, #2563eb);
+}
+
+/* Sélection rapide avec chips */
+.signature-quick-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.signature-chip-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.signature-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 20px 0 0 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.signature-chip-wrapper .signature-chip {
+  padding-right: 8px;
+}
+
+.signature-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  background: var(--color-bg-alt, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-left: none;
+  border-radius: 0 20px 20px 0;
+  cursor: pointer;
+  color: var(--color-text-muted, #64748b);
+  transition: all 0.2s;
+}
+
+.signature-edit-btn:hover {
+  background: var(--color-primary, #3b82f6);
+  color: white;
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.signature-chip-wrapper:hover .signature-chip {
+  border-color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+}
+
+.signature-chip-wrapper:hover .signature-edit-btn {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.signature-chip:hover {
+  border-color: var(--color-primary, #3b82f6);
+  background: var(--color-primary-light, #eff6ff);
+}
+
+.signature-chip.selected {
+  background: var(--color-primary, #3b82f6);
+  color: white;
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.signature-chip-wrapper .signature-chip.selected + .signature-edit-btn {
+  background: var(--color-primary-dark, #2563eb);
+  border-color: var(--color-primary, #3b82f6);
+  color: white;
+}
+
+.signature-chip .default-star {
+  color: #f59e0b;
+}
+
+.signature-chip.selected .default-star {
+  color: #fbbf24;
+}
+
+.signature-chip.add-new {
+  border-style: dashed;
+  color: var(--color-text-muted, #64748b);
+  border-radius: 20px;
+}
+
+.signature-chip.add-new:hover {
+  color: var(--color-primary, #3b82f6);
+}
+
+/* Aperçu de la signature */
+.signature-preview {
+  background: white;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.signature-preview .preview-line {
+  color: var(--color-text, #1e293b);
+}
+
+.signature-preview .preview-line.name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+/* Gestionnaire de signatures */
+.signature-manager {
+  margin-top: 16px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  padding-top: 16px;
+}
+
+.manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.manager-header h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  margin: 0;
+}
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--color-success, #10b981);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add:hover {
+  background: var(--color-success-dark, #059669);
+}
+
+/* Liste des signatures */
+.signatures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signature-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.signature-info {
+  flex: 1;
+}
+
+.signature-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+}
+
+.signature-name .default-star {
+  color: #f59e0b;
+}
+
+.signature-titles {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 2px;
+}
+
+.signature-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-icon {
+  padding: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-muted, #64748b);
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: var(--color-bg-alt, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+}
+
+.btn-icon.danger:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+/* Modal d'édition */
+.signature-editor-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.modal-header h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  margin: 0;
+}
+
+.btn-close {
+  padding: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-muted, #64748b);
+  transition: all 0.2s;
+}
+
+.btn-close:hover {
+  background: var(--color-bg-alt, #f1f5f9);
+  color: var(--color-text, #1e293b);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-body .form-field {
+  margin-bottom: 16px;
+}
+
+.modal-body .form-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text, #1e293b);
+  margin-bottom: 6px;
+}
+
+.modal-body .form-field input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.modal-body .form-field input[type="text"]:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.form-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text, #1e293b);
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary, #3b82f6);
+}
+
+/* Aperçu dans l'éditeur */
+.editor-preview {
+  margin-top: 20px;
+}
+
+.editor-preview label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text, #1e293b);
+  margin-bottom: 8px;
+}
+
+.preview-box {
+  background: var(--color-bg-alt, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.preview-box .preview-line {
+  color: var(--color-text, #1e293b);
+}
+
+.preview-box .preview-line.name {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.preview-box .preview-line.cert {
+  font-style: italic;
+  color: var(--color-text-muted, #64748b);
+}
+
+.preview-box .preview-line.rme {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.preview-box .preview-line.email {
+  color: var(--color-primary, #3b82f6);
+  font-size: 12px;
+}
+
+/* Footer du modal */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-bg-alt, #f8fafc);
+  border-radius: 0 0 16px 16px;
+}
+
+.btn-cancel {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background: var(--color-bg-alt, #f1f5f9);
+}
+
+.btn-save {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--color-primary, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-save:hover {
+  background: var(--color-primary-dark, #2563eb);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .signature-editor-modal {
+    padding: 10px;
+  }
+  
+  .modal-content {
+    max-height: 95vh;
+  }
+  
+  .form-checkboxes {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+

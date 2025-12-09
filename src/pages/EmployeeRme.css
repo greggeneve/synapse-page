@@ -1,0 +1,72 @@
+/* ============================================
+   EmployeeRme.css - Page formations RME
+   ============================================ */
+
+.employee-rme-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.employee-rme-page .page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 32px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.employee-rme-page .btn-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 10px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.employee-rme-page .btn-back:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.employee-rme-page .header-info h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.employee-rme-page .header-info p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.employee-rme-page .page-content {
+  padding: 24px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .employee-rme-page .page-header {
+    padding: 16px;
+  }
+
+  .employee-rme-page .page-content {
+    padding: 16px;
+  }
+
+  .employee-rme-page .header-info h1 {
+    font-size: 1.25rem;
+  }
+}
+
