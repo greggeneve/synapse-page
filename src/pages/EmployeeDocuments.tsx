@@ -24,7 +24,9 @@ import {
   X,
   Mail,
   Send,
-  Loader2
+  Loader2,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { query } from '../services/mariadb';
 import { queueEmail } from '../services/emailService';
@@ -66,13 +68,25 @@ const MONTHS = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
 
+type ViewMode = 'type' | 'year';
+
+// Configuration des types de documents pour les badges
+const DOC_TYPE_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  payslip: { label: 'Fiche de paie', color: '#3b82f6', bgColor: '#dbeafe' },
+  tax_certificate: { label: 'Quittance IS', color: '#8b5cf6', bgColor: '#ede9fe' },
+  salary_certificate: { label: 'Certificat', color: '#10b981', bgColor: '#d1fae5' },
+  contract: { label: 'Contrat', color: '#f59e0b', bgColor: '#fef3c7' },
+  other: { label: 'Autre', color: '#64748b', bgColor: '#f1f5f9' }
+};
+
 export function EmployeeDocuments({ user }: EmployeeDocumentsProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>(new Date().getFullYear());
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [isSubjectToWithholdingTax, setIsSubjectToWithholdingTax] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('type');
   
   // États pour l'envoi par email
   const [emailDoc, setEmailDoc] = useState<Document | null>(null);
@@ -165,13 +179,18 @@ export function EmployeeDocuments({ user }: EmployeeDocumentsProps) {
     setLoading(true);
     try {
       // Charger les fiches de paie
-      const payslipsResult = await query<any>(
-        `SELECT id, mois, annee, pdf_data, created_at 
-         FROM salary_pdfs 
-         WHERE employee_id = ? AND annee = ?
-         ORDER BY annee DESC, mois DESC`,
-        [employeeId, selectedYear]
-      );
+      const payslipsQuery = selectedYear === 'all'
+        ? `SELECT id, mois, annee, pdf_data, created_at 
+           FROM salary_pdfs 
+           WHERE employee_id = ?
+           ORDER BY annee DESC, mois DESC`
+        : `SELECT id, mois, annee, pdf_data, created_at 
+           FROM salary_pdfs 
+           WHERE employee_id = ? AND annee = ?
+           ORDER BY annee DESC, mois DESC`;
+      
+      const payslipsParams = selectedYear === 'all' ? [employeeId] : [employeeId, selectedYear];
+      const payslipsResult = await query<any>(payslipsQuery, payslipsParams);
 
       const payslips: Document[] = (payslipsResult.data || []).map((p: any) => ({
         id: p.id,
@@ -186,50 +205,77 @@ export function EmployeeDocuments({ user }: EmployeeDocumentsProps) {
       }));
 
       // Charger les contrats depuis le JSON employees (structure PayFlow)
+      // Les documents peuvent être dans $.contracts ou $.documents
       const contractsResult = await query<any>(
-        `SELECT JSON_EXTRACT(profile_json, '$.contracts') as contracts
+        `SELECT 
+           JSON_EXTRACT(profile_json, '$.contracts') as contracts,
+           JSON_EXTRACT(profile_json, '$.documents') as documents
          FROM employees WHERE employee_id = ?`,
         [employeeId]
       );
 
       let contracts: Document[] = [];
-      if (contractsResult.success && contractsResult.data?.[0]?.contracts) {
-        try {
-          const contractsData = typeof contractsResult.data[0].contracts === 'string' 
-            ? JSON.parse(contractsResult.data[0].contracts) 
-            : contractsResult.data[0].contracts;
-          
-          // Structure PayFlow: id, type, titre, titre_original, date_document, date_upload, file_url, file_type, file_size
-          contracts = (contractsData || []).map((c: any) => {
-            const docDate = c.date_document || c.date_upload || '';
-            const dateObj = docDate ? new Date(docDate) : new Date();
+      if (contractsResult.success && contractsResult.data?.[0]) {
+        const row = contractsResult.data[0];
+        console.log('[Documents] Données brutes contrats:', row.contracts);
+        console.log('[Documents] Données brutes documents:', row.documents);
+        
+        // Essayer les deux chemins possibles
+        const rawData = row.contracts || row.documents;
+        
+        if (rawData) {
+          try {
+            const contractsData = typeof rawData === 'string' 
+              ? JSON.parse(rawData) 
+              : rawData;
             
-            return {
-              id: c.id || Math.random() * 10000,
-              type: 'contract' as const,
-              title: c.titre || c.titre_original || `Contrat de travail`,
-              description: c.type ? `Type: ${c.type}` : undefined,
-              date: docDate,
-              year: dateObj.getFullYear(),
-              file_name: c.titre_original || c.titre || `contrat.pdf`,
-              file_url: c.file_url, // Base64 stocké ici
-              status: 'available' as const
-            };
-          });
-        } catch (e) {
-          console.error('Erreur parsing contrats:', e);
+            console.log('[Documents] Contrats parsés:', contractsData);
+            
+            // Structure PayFlow: id, type, titre, titre_original, date_document, date_upload, file_url/content, file_type, file_size
+            // OU structure alternative: name, filename, data, mimeType, uploadedAt
+            const dataArray = Array.isArray(contractsData) ? contractsData : [contractsData];
+            
+            contracts = dataArray.filter(Boolean).map((c: any, index: number) => {
+              const docDate = c.date_document || c.date_upload || c.uploadedAt || c.created_at || '';
+              const dateObj = docDate ? new Date(docDate) : new Date();
+              
+              // Supporter différentes structures de données
+              const fileContent = c.file_url || c.content || c.data || c.pdf_data || c.base64 || '';
+              const fileName = c.titre_original || c.titre || c.filename || c.name || `contrat_${index + 1}.pdf`;
+              const title = c.titre || c.name || c.titre_original || c.filename || `Contrat de travail`;
+              
+              return {
+                id: c.id || index + 1,
+                type: 'contract' as const,
+                title: title,
+                description: c.type ? `Type: ${c.type}` : c.description,
+                date: docDate,
+                year: dateObj.getFullYear(),
+                file_name: fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`,
+                file_url: fileContent,
+                status: fileContent ? 'available' as const : 'pending' as const
+              };
+            }).filter(c => c.title); // Filtrer les entrées vides
+            
+            console.log('[Documents] Contrats formatés:', contracts);
+          } catch (e) {
+            console.error('[Documents] Erreur parsing contrats:', e, rawData);
+          }
         }
       }
 
       // Charger les certificats de salaire (si table existe)
       let salaryCertificates: Document[] = [];
       try {
-        const certResult = await query<any>(
-          `SELECT * FROM salary_certificates 
-           WHERE employee_id = ? AND year = ?
-           ORDER BY year DESC`,
-          [employeeId, selectedYear]
-        );
+        const certQuery = selectedYear === 'all'
+          ? `SELECT * FROM salary_certificates 
+             WHERE employee_id = ?
+             ORDER BY year DESC`
+          : `SELECT * FROM salary_certificates 
+             WHERE employee_id = ? AND year = ?
+             ORDER BY year DESC`;
+        const certParams = selectedYear === 'all' ? [employeeId] : [employeeId, selectedYear];
+        const certResult = await query<any>(certQuery, certParams);
         if (certResult.success && certResult.data) {
           salaryCertificates = certResult.data.map((c: any) => ({
             id: c.id,
@@ -250,12 +296,15 @@ export function EmployeeDocuments({ user }: EmployeeDocumentsProps) {
       let taxDocs: Document[] = [];
       if (isSubjectToWithholdingTax) {
         try {
-          const taxResult = await query<any>(
-            `SELECT * FROM tax_withholding_docs 
-             WHERE employee_id = ? AND year = ?
-             ORDER BY year DESC, month DESC`,
-            [employeeId, selectedYear]
-          );
+          const taxQuery = selectedYear === 'all'
+            ? `SELECT * FROM tax_withholding_docs 
+               WHERE employee_id = ?
+               ORDER BY year DESC, month DESC`
+            : `SELECT * FROM tax_withholding_docs 
+               WHERE employee_id = ? AND year = ?
+               ORDER BY year DESC, month DESC`;
+          const taxParams = selectedYear === 'all' ? [employeeId] : [employeeId, selectedYear];
+          const taxResult = await query<any>(taxQuery, taxParams);
           if (taxResult.success && taxResult.data) {
             taxDocs = taxResult.data.map((t: any) => ({
               id: t.id,
@@ -417,6 +466,38 @@ export function EmployeeDocuments({ user }: EmployeeDocumentsProps) {
 
   const totalDocs = filteredCategories.reduce((acc, cat) => acc + cat.documents.length, 0);
 
+  // Grouper tous les documents par année pour la vue annuelle
+  const getDocumentsByYear = () => {
+    const allDocs: Document[] = filteredCategories.flatMap(cat => cat.documents);
+    const byYear: Record<number, Document[]> = {};
+    
+    allDocs.forEach(doc => {
+      const year = doc.year;
+      if (!byYear[year]) {
+        byYear[year] = [];
+      }
+      byYear[year].push(doc);
+    });
+
+    // Trier les documents dans chaque année par date (du plus récent au plus ancien)
+    Object.keys(byYear).forEach(year => {
+      byYear[parseInt(year)].sort((a, b) => {
+        // Trier par mois (si existant) puis par date
+        if (a.month && b.month) {
+          return b.month - a.month;
+        }
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+    });
+
+    // Retourner les années triées du plus récent au plus ancien
+    return Object.entries(byYear)
+      .map(([year, docs]) => ({ year: parseInt(year), documents: docs }))
+      .sort((a, b) => b.year - a.year);
+  };
+
+  const documentsByYear = getDocumentsByYear();
+
   // Générer les années disponibles (5 dernières années)
   const currentYear = new Date().getFullYear();
   const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -436,18 +517,43 @@ export function EmployeeDocuments({ user }: EmployeeDocumentsProps) {
         </div>
 
         <div className="header-actions">
-          {/* Filtre par année */}
-          <div className="year-filter">
-            <Calendar size={18} />
-            <select 
-              value={selectedYear} 
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+          {/* Toggle vue */}
+          <div className="view-toggle">
+            <button
+              className={`toggle-btn ${viewMode === 'type' ? 'active' : ''}`}
+              onClick={() => setViewMode('type')}
+              title="Vue par type"
             >
-              {availableYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+              <LayoutGrid size={18} />
+              <span>Par type</span>
+            </button>
+            <button
+              className={`toggle-btn ${viewMode === 'year' ? 'active' : ''}`}
+              onClick={() => {
+                setViewMode('year');
+                setSelectedYear('all'); // Passer en mode toutes les années
+              }}
+              title="Vue annuelle"
+            >
+              <List size={18} />
+              <span>Par année</span>
+            </button>
           </div>
+
+          {/* Filtre par année - visible seulement en vue par type */}
+          {viewMode === 'type' && (
+            <div className="year-filter">
+              <Calendar size={18} />
+              <select 
+                value={selectedYear === 'all' ? currentYear : selectedYear} 
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              >
+                {availableYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Recherche */}
           <div className="search-box">
@@ -474,7 +580,8 @@ export function EmployeeDocuments({ user }: EmployeeDocumentsProps) {
             <div className="spinner"></div>
             <p>Chargement des documents...</p>
           </div>
-        ) : (
+        ) : viewMode === 'type' ? (
+          /* VUE PAR TYPE */
           <div className="categories-list">
             {filteredCategories.map(category => (
               <div 
@@ -570,6 +677,93 @@ export function EmployeeDocuments({ user }: EmployeeDocumentsProps) {
                 )}
               </div>
             ))}
+          </div>
+        ) : (
+          /* VUE PAR ANNÉE */
+          <div className="yearly-view">
+            {documentsByYear.length === 0 ? (
+              <div className="empty-state">
+                <FolderOpen size={48} />
+                <h3>Aucun document disponible</h3>
+                <p>Vos documents apparaîtront ici une fois disponibles.</p>
+              </div>
+            ) : (
+              documentsByYear.map(({ year, documents }) => (
+                <div key={year} className="year-section">
+                  <div className="year-header">
+                    <div className="year-badge">
+                      <Calendar size={20} />
+                      <span>{year}</span>
+                    </div>
+                    <span className="year-count">
+                      {documents.length} document{documents.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="year-documents">
+                    {documents.map(doc => (
+                      <div key={`${doc.type}-${doc.id}-${doc.year}`} className="document-card yearly">
+                        <div 
+                          className="doc-type-badge"
+                          style={{ 
+                            background: DOC_TYPE_CONFIG[doc.type]?.bgColor || '#f1f5f9',
+                            color: DOC_TYPE_CONFIG[doc.type]?.color || '#64748b'
+                          }}
+                        >
+                          {DOC_TYPE_CONFIG[doc.type]?.label || 'Document'}
+                        </div>
+                        <div className="doc-icon">
+                          <FileText size={20} />
+                        </div>
+                        <div className="doc-info">
+                          <h3>{doc.title}</h3>
+                          <div className="doc-meta">
+                            <span className="doc-date">
+                              <Clock size={14} />
+                              {doc.month 
+                                ? `${MONTHS[doc.month - 1]} ${doc.year}`
+                                : doc.year
+                              }
+                            </span>
+                            <span className={`doc-status ${doc.status}`}>
+                              {doc.status === 'available' && <><CheckCircle size={14} /> Disponible</>}
+                              {doc.status === 'pending' && <><AlertTriangle size={14} /> En attente</>}
+                              {doc.status === 'processing' && <><Clock size={14} /> En cours</>}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="doc-actions">
+                          {(doc.file_data || doc.file_url) && (
+                            <>
+                              <button 
+                                className="btn-action preview"
+                                onClick={() => handlePreview(doc)}
+                                title="Aperçu"
+                              >
+                                <Eye size={18} />
+                              </button>
+                              <button 
+                                className="btn-action email"
+                                onClick={() => handleEmailOpen(doc)}
+                                title="Envoyer par email"
+                              >
+                                <Mail size={18} />
+                              </button>
+                              <button 
+                                className="btn-action download"
+                                onClick={() => handleDownload(doc)}
+                                title="Télécharger"
+                              >
+                                <Download size={18} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

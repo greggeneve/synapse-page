@@ -64,6 +64,51 @@
   gap: 16px;
 }
 
+/* View Toggle */
+.view-toggle {
+  display: flex;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.view-toggle .toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-toggle .toggle-btn:hover {
+  color: #1e293b;
+}
+
+.view-toggle .toggle-btn.active {
+  background: white;
+  color: #3b82f6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-toggle .toggle-btn span {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .view-toggle .toggle-btn span {
+    display: inline;
+  }
+}
+
 /* Year Filter */
 .year-filter {
   display: flex;
@@ -541,6 +586,105 @@
   opacity: 0.5;
 }
 
+/* =====================================================
+   Vue Annuelle / Yearly View
+   ===================================================== */
+
+.yearly-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.empty-state svg {
+  color: #cbd5e1;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+.empty-state p {
+  color: #64748b;
+  margin: 0;
+}
+
+/* Year Section */
+.year-section {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.year-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: white;
+}
+
+.year-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.year-badge svg {
+  opacity: 0.8;
+}
+
+.year-count {
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.year-documents {
+  padding: 12px;
+}
+
+/* Document Card in Yearly View */
+.document-card.yearly {
+  position: relative;
+  padding-left: 110px;
+}
+
+.doc-type-badge {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .documents-header {
@@ -554,12 +698,28 @@
     gap: 12px;
   }
 
+  .view-toggle {
+    justify-content: center;
+  }
+
   .search-box {
     min-width: 100%;
   }
 
   .document-card {
     flex-wrap: wrap;
+  }
+
+  .document-card.yearly {
+    padding-left: 16px;
+    padding-top: 44px;
+  }
+
+  .doc-type-badge {
+    position: absolute;
+    left: 16px;
+    top: 12px;
+    transform: none;
   }
 
   .doc-actions {

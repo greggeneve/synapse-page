@@ -93,7 +93,7 @@ export async function authenticateUser(email: string, password: string): Promise
       SELECT e.profile_json
       FROM employees e
       WHERE e.employee_id = ?
-      AND JSON_EXTRACT(e.profile_json, '$.hrStatus.collaborateur_actif') = true
+      AND JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
     `, [account.employee_id]);
 
     if (!profileResult.success || !profileResult.data || profileResult.data.length === 0) {
@@ -114,6 +114,11 @@ export async function authenticateUser(email: string, password: string): Promise
       WHERE employee_id = ?
     `, [account.employee_id]);
 
+    // Détecter les rôles de direction basés sur la fonction
+    const fonction = (profile.hrStatus?.statut_dans_societe || '').toLowerCase();
+    const isDirecteur = fonction.includes('directeur') && !fonction.includes('adjoint');
+    const isDirecteurAdjoint = fonction.includes('directeur') && fonction.includes('adjoint');
+
     const user: AuthUser = {
       id: account.employee_id,
       nom: profile.identification?.nom || '',
@@ -123,7 +128,9 @@ export async function authenticateUser(email: string, password: string): Promise
       email_professionnel: email.toLowerCase(),
       actif: true,
       isSuperAdmin: account.is_super_admin === 1,
-      isAdmin: account.is_admin === 1
+      isAdmin: account.is_admin === 1,
+      isDirecteur,
+      isDirecteurAdjoint
     };
 
     return {
@@ -167,6 +174,11 @@ export async function loginAsUser(adminUser: AuthUser, targetEmail: string): Pro
     // Récupérer la photo depuis la table employee_photos
     const photoUrl = await getEmployeePhoto(row.employee_id);
 
+    // Détecter les rôles de direction basés sur la fonction
+    const fonction = (profile.hrStatus?.statut_dans_societe || '').toLowerCase();
+    const isDirecteur = fonction.includes('directeur') && !fonction.includes('adjoint');
+    const isDirecteurAdjoint = fonction.includes('directeur') && fonction.includes('adjoint');
+
     const user: AuthUser = {
       id: row.employee_id,
       nom: profile.identification?.nom || '',
@@ -177,7 +189,9 @@ export async function loginAsUser(adminUser: AuthUser, targetEmail: string): Pro
       actif: true,
       isSuperAdmin: false,
       isAdmin: false,
-      impersonating: `${adminUser.prenom} ${adminUser.nom}` // Qui impersonne
+      impersonating: `${adminUser.prenom} ${adminUser.nom}`, // Qui impersonne
+      isDirecteur,
+      isDirecteurAdjoint
     };
 
     return { success: true, user };
@@ -196,7 +210,7 @@ export async function getAvailableUsers(): Promise<{ id: string; email: string; 
       JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.prenom')) AS prenom
     FROM employee_auth ea
     JOIN employees e ON ea.employee_id = e.employee_id
-    WHERE JSON_EXTRACT(e.profile_json, '$.hrStatus.collaborateur_actif') = true
+    WHERE JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
     ORDER BY nom, prenom
   `);
 

@@ -22,10 +22,26 @@ import {
   Palmtree,
   ArrowLeftRight,
   FileCheck,
-  GraduationCap
+  GraduationCap,
+  Mail,
+  // Direction icons
+  Users,
+  CalendarClock,
+  CalendarX,
+  HeartPulse,
+  ClipboardList,
+  FileBarChart,
+  UserCheck,
+  Building2,
+  Inbox,
+  BarChart3,
+  AlertCircle,
+  BadgeCheck
 } from 'lucide-react';
 import { isOsteopath } from '../services/rmeEmployeeService';
 import { getAvailableUsers, loginAsUser } from '../services/authService';
+import { getEmployeeEmailCredentials, getUnreadCount, type EmailCredentials } from '../services/mailService';
+import { MailClient } from '../components/MailClient';
 import type { TeamMember } from '../types';
 
 interface DashboardProps {
@@ -34,12 +50,64 @@ interface DashboardProps {
   onLogout?: () => void;
 }
 
+// Type pour le mode professionnel
+type ProfessionalMode = 'osteo' | 'direction';
+
+// Détection du rôle de direction basée sur la fonction
+function detectDirectionRole(fonction: string): { isDirecteur: boolean; isDirecteurAdjoint: boolean } {
+  const fonctionLower = (fonction || '').toLowerCase();
+  const isDirecteur = fonctionLower.includes('directeur') && !fonctionLower.includes('adjoint');
+  const isDirecteurAdjoint = fonctionLower.includes('directeur') && fonctionLower.includes('adjoint');
+  return { isDirecteur, isDirecteurAdjoint };
+}
+
+// Détection du personnel d'accueil/réception/administratif
+function isReceptionOrAdmin(fonction: string, isAdmin?: boolean, isSuperAdmin?: boolean): boolean {
+  if (isAdmin || isSuperAdmin) return true;
+  const fonctionLower = (fonction || '').toLowerCase();
+  return (
+    fonctionLower.includes('accueil') ||
+    fonctionLower.includes('réception') ||
+    fonctionLower.includes('reception') ||
+    fonctionLower.includes('secrétaire') ||
+    fonctionLower.includes('secretaire') ||
+    fonctionLower.includes('administratif') ||
+    fonctionLower.includes('administrative') ||
+    fonctionLower.includes('assistant') ||
+    fonctionLower.includes('gestionnaire')
+  );
+}
+
 export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<{ id: string; email: string; nom: string; prenom: string }[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasRme, setHasRme] = useState(false);
+  
+  // Mode professionnel (Ostéo ou Direction)
+  // Détection du rôle de direction (depuis user ou fallback sur la fonction)
+  const detectedRole = detectDirectionRole(user.fonction);
+  const isDirecteur = user.isDirecteur ?? detectedRole.isDirecteur;
+  const isDirecteurAdjoint = user.isDirecteurAdjoint ?? detectedRole.isDirecteurAdjoint;
+  const hasDirectionRole = isDirecteur || isDirecteurAdjoint;
+  const [proMode, setProMode] = useState<ProfessionalMode>('osteo');
+  
+  // Personnel d'accueil/administratif (peut déposer des rapports d'assurance)
+  const isReceptionStaff = isReceptionOrAdmin(user.fonction, user.isAdmin, user.isSuperAdmin);
+  const canAccessInsuranceUpload = isReceptionStaff || hasDirectionRole;
+  
+  // Réinitialiser le mode quand l'utilisateur change ou n'a pas les droits
+  useEffect(() => {
+    if (!hasDirectionRole) {
+      setProMode('osteo');
+    }
+  }, [user.id, hasDirectionRole]);
+  
+  // État pour le client mail Synapse
+  const [isMailClientOpen, setIsMailClientOpen] = useState(false);
+  const [mailCredentials, setMailCredentials] = useState<EmailCredentials | null>(null);
+  const [unreadMailCount, setUnreadMailCount] = useState(0);
 
   // Charger la liste des utilisateurs pour le super admin
   useEffect(() => {
@@ -54,6 +122,41 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
       isOsteopath(user.id.toString()).then(setHasRme);
     }
   }, [user.id]);
+
+  // Charger les credentials mail et le compteur de non-lus
+  useEffect(() => {
+    if (user.id) {
+      console.log('[Mail] Chargement credentials pour user.id:', user.id);
+      // Charger les credentials
+      getEmployeeEmailCredentials(user.id.toString()).then(creds => {
+        console.log('[Mail] Credentials reçus:', creds);
+        if (creds && creds.email_address && creds.email_password) {
+          console.log('[Mail] Credentials valides, activation du mail');
+          setMailCredentials(creds);
+          // Charger le compteur de non-lus
+          getUnreadCount(creds).then(setUnreadMailCount);
+        } else {
+          console.log('[Mail] Credentials invalides ou manquants:', {
+            hasAddress: !!creds?.email_address,
+            hasPassword: !!creds?.email_password
+          });
+        }
+      }).catch(err => {
+        console.error('[Mail] Erreur chargement credentials:', err);
+      });
+    }
+  }, [user.id]);
+
+  // Rafraîchir le compteur de non-lus toutes les minutes
+  useEffect(() => {
+    if (!mailCredentials) return;
+    
+    const interval = setInterval(() => {
+      getUnreadCount(mailCredentials).then(setUnreadMailCount);
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [mailCredentials]);
 
   // Se connecter en tant qu'un autre utilisateur
   const handleLoginAs = async (email: string) => {
@@ -130,6 +233,20 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
               <Settings size={20} />
             </button>
           )}
+          {/* Icône Mail */}
+          <button 
+            className={`btn-icon-header mail ${mailCredentials ? '' : 'disabled'}`}
+            title={mailCredentials 
+              ? `Messagerie${unreadMailCount > 0 ? ` (${unreadMailCount} non lu${unreadMailCount > 1 ? 's' : ''})` : ''}`
+              : 'Messagerie (non configurée)'
+            }
+            onClick={() => setIsMailClientOpen(true)}
+          >
+            <Mail size={20} />
+            {unreadMailCount > 0 && (
+              <span className="notification-badge mail-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
+            )}
+          </button>
           <button className="btn-icon-header" title="Notifications">
             <Bell size={20} />
             <span className="notification-badge">2</span>
@@ -309,102 +426,286 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
               <span className="card-badge">3</span>
               <ChevronRight size={18} className="card-arrow" />
             </button>
-
-            {/* Coordonnées bancaires */}
-            <button 
-              className="dashboard-card"
-              onClick={() => navigate('/employee/bank')}
-            >
-              <CreditCard size={20} />
-              <div className="card-content">
-                <h3>Coordonnées bancaires</h3>
-                <p>IBAN, modifications</p>
-              </div>
-              <ChevronRight size={18} className="card-arrow" />
-            </button>
           </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════
-            ESPACE PRO - Activité métier (ostéopathie)
+            ESPACE PRO - Activité métier (ostéopathie), Direction ou Accueil
         ═══════════════════════════════════════════════════════════════ */}
-        <section className="dashboard-section pro-section">
+        <section className={`dashboard-section pro-section ${proMode === 'direction' ? 'direction-mode' : ''} ${isReceptionStaff && !hasRme && !hasDirectionRole ? 'reception-mode' : ''}`}>
           <div className="section-header">
-            <div className="section-icon pro">
-              <Briefcase size={24} />
+            <div className={`section-icon ${proMode === 'direction' ? 'direction' : isReceptionStaff && !hasRme ? 'reception' : 'pro'}`}>
+              {proMode === 'direction' ? <Building2 size={24} /> : isReceptionStaff && !hasRme && !hasDirectionRole ? <Inbox size={24} /> : <Briefcase size={24} />}
             </div>
             <div>
               <h2>Mon Activité Professionnelle</h2>
-              <p>Consultations, rapports & outils métier</p>
+              <p>{proMode === 'direction' 
+                ? 'Gestion de l\'équipe & supervision' 
+                : isReceptionStaff && !hasRme && !hasDirectionRole
+                  ? 'Accueil, gestion des documents & rapports'
+                  : 'Consultations, rapports & outils métier'}</p>
             </div>
+            
+            {/* Toggle Mode Ostéo / Direction - uniquement pour directeurs */}
+            {hasDirectionRole && (
+              <div className="pro-mode-toggle">
+                <button 
+                  className={`mode-btn ${proMode === 'osteo' ? 'active' : ''}`}
+                  onClick={() => setProMode('osteo')}
+                  title="Mode Ostéopathe"
+                >
+                  <Stethoscope size={16} />
+                  <span>Ostéo</span>
+                </button>
+                <button 
+                  className={`mode-btn ${proMode === 'direction' ? 'active' : ''}`}
+                  onClick={() => setProMode('direction')}
+                  title={isDirecteur ? 'Mode Directeur' : 'Mode Directeur Adjoint'}
+                >
+                  <Building2 size={16} />
+                  <span>{isDirecteur ? 'Direction' : 'Dir. Adj.'}</span>
+                </button>
+              </div>
+            )}
           </div>
           
-          <div className="section-cards">
-            {/* Planning consultations */}
-            <button 
-              className="dashboard-card highlight primary"
-              onClick={() => navigate('/pro/planning')}
-            >
-              <Calendar size={20} />
-              <div className="card-content">
-                <h3>Mon Planning</h3>
-                <p>Consultations jour/sem/mois</p>
-              </div>
-              <ChevronRight size={18} className="card-arrow" />
-            </button>
+          {/* ═══════════ MODE OSTÉOPATHE ═══════════ */}
+          {proMode === 'osteo' && (
+            <div className="section-cards">
+              {/* Planning consultations */}
+              <button 
+                className="dashboard-card highlight primary"
+                onClick={() => navigate('/pro/planning')}
+              >
+                <Calendar size={20} />
+                <div className="card-content">
+                  <h3>Mon Planning</h3>
+                  <p>Consultations jour/sem/mois</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
 
-            {/* Espace de travail */}
-            <button 
-              className="dashboard-card highlight"
-              onClick={() => navigate('/pro/workspace')}
-            >
-              <Stethoscope size={20} />
-              <div className="card-content">
-                <h3>Espace de travail</h3>
-                <p>Patients, salle d'attente</p>
-              </div>
-              <ChevronRight size={18} className="card-arrow" />
-            </button>
+              {/* Espace de travail */}
+              <button 
+                className="dashboard-card highlight"
+                onClick={() => navigate('/pro/workspace')}
+              >
+                <Stethoscope size={20} />
+                <div className="card-content">
+                  <h3>Espace de travail</h3>
+                  <p>Patients, salle d'attente</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
 
-            {/* Rapports */}
-            <button 
-              className="dashboard-card highlight"
-              onClick={() => navigate('/pro/reports')}
-            >
-              <FileCheck size={20} />
-              <div className="card-content">
-                <h3>Rédiger un rapport</h3>
-                <p>Rapports avec correction IA</p>
-              </div>
-              <ChevronRight size={18} className="card-arrow" />
-            </button>
+              {/* Rapports */}
+              <button 
+                className="dashboard-card highlight"
+                onClick={() => navigate('/pro/reports')}
+              >
+                <FileCheck size={20} />
+                <div className="card-content">
+                  <h3>Rédiger un rapport</h3>
+                  <p>Rapports avec correction IA</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
 
-            {/* Statistiques */}
-            <button 
-              className="dashboard-card"
-              onClick={() => navigate('/pro/stats')}
-            >
-              <Clock size={20} />
-              <div className="card-content">
-                <h3>Mes statistiques</h3>
-                <p>Activité, CA, heures</p>
-              </div>
-              <ChevronRight size={18} className="card-arrow" />
-            </button>
+              {/* Rapports d'assurance */}
+              <button 
+                className="dashboard-card"
+                onClick={() => navigate('/pro/insurance-reports')}
+              >
+                <FileBarChart size={20} />
+                <div className="card-content">
+                  <h3>Rapports Assurance</h3>
+                  <p>Formulaires à remplir</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
 
-            {/* Démo Transcription */}
-            <button 
-              className="dashboard-card demo-card"
-              onClick={() => navigate('/pro/demo')}
-            >
-              <Mic size={20} />
-              <div className="card-content">
-                <h3>🧪 Démo Transcription</h3>
-                <p>Audio → Texte avec IA</p>
-              </div>
-              <ChevronRight size={18} className="card-arrow" />
-            </button>
-          </div>
+              {/* Statistiques */}
+              <button 
+                className="dashboard-card"
+                onClick={() => navigate('/pro/stats')}
+              >
+                <Clock size={20} />
+                <div className="card-content">
+                  <h3>Mes statistiques</h3>
+                  <p>Activité, CA, heures</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Démo Transcription */}
+              <button 
+                className="dashboard-card demo-card"
+                onClick={() => navigate('/pro/demo')}
+              >
+                <Mic size={20} />
+                <div className="card-content">
+                  <h3>🧪 Démo Transcription</h3>
+                  <p>Audio → Texte avec IA</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+            </div>
+          )}
+
+          {/* ═══════════ MODE ACCUEIL/RÉCEPTION ═══════════ */}
+          {isReceptionStaff && !hasRme && !hasDirectionRole && (
+            <div className="section-cards reception-cards">
+              {/* Rapports d'assurance - Dépôt & Suivi */}
+              <button 
+                className="dashboard-card highlight primary reception-card"
+                onClick={() => navigate('/insurance-reports')}
+              >
+                <FileBarChart size={20} />
+                <div className="card-content">
+                  <h3>Rapports Assurance</h3>
+                  <p>Dépôt, suivi & envoi</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Gestion des patients */}
+              <button 
+                className="dashboard-card highlight reception-card"
+                onClick={() => navigate('/reception/patients')}
+              >
+                <Users size={20} />
+                <div className="card-content">
+                  <h3>Patients</h3>
+                  <p>Recherche & dossiers</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Rendez-vous du jour */}
+              <button 
+                className="dashboard-card reception-card"
+                onClick={() => navigate('/reception/appointments')}
+              >
+                <Calendar size={20} />
+                <div className="card-content">
+                  <h3>Rendez-vous</h3>
+                  <p>Planning du jour</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+            </div>
+          )}
+
+          {/* ═══════════ MODE DIRECTION ═══════════ */}
+          {proMode === 'direction' && (
+            <div className="section-cards direction-cards">
+              {/* Gestion du planning équipe */}
+              <button 
+                className="dashboard-card highlight primary direction-card"
+                onClick={() => navigate('/direction/team-planning')}
+              >
+                <CalendarClock size={20} />
+                <div className="card-content">
+                  <h3>Planning Équipe</h3>
+                  <p>Planification horaires collaborateurs</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Gestion des vacances */}
+              <button 
+                className="dashboard-card highlight direction-card"
+                onClick={() => navigate('/direction/vacations')}
+              >
+                <Palmtree size={20} />
+                <div className="card-content">
+                  <h3>Gestion Vacances</h3>
+                  <p>Demandes & soldes équipe</p>
+                </div>
+                <span className="card-badge warning">3</span>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Congés maladie / Accidents */}
+              <button 
+                className="dashboard-card highlight direction-card"
+                onClick={() => navigate('/direction/absences')}
+              >
+                <HeartPulse size={20} />
+                <div className="card-content">
+                  <h3>Absences & Arrêts</h3>
+                  <p>Maladie, accident, décès famille</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Demandes en attente */}
+              <button 
+                className="dashboard-card direction-card"
+                onClick={() => navigate('/direction/requests')}
+              >
+                <ClipboardList size={20} />
+                <div className="card-content">
+                  <h3>Demandes en attente</h3>
+                  <p>Validations, échanges, modifications</p>
+                </div>
+                <span className="card-badge">5</span>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Tableau de bord rapports assurance */}
+              <button 
+                className="dashboard-card direction-card"
+                onClick={() => navigate('/insurance-reports')}
+              >
+                <FileBarChart size={20} />
+                <div className="card-content">
+                  <h3>Rapports Assurance</h3>
+                  <p>Suivi, dépôt & validation</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Rapports de consultation (équipe) */}
+              <button 
+                className="dashboard-card direction-card"
+                onClick={() => navigate('/direction/consultation-reports')}
+              >
+                <FileCheck size={20} />
+                <div className="card-content">
+                  <h3>Rapports Consultation</h3>
+                  <p>Supervision rapports équipe</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Vue équipe */}
+              <button 
+                className="dashboard-card direction-card"
+                onClick={() => navigate('/direction/team')}
+              >
+                <Users size={20} />
+                <div className="card-content">
+                  <h3>Mon Équipe</h3>
+                  <p>Collaborateurs, rôles, contacts</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Statistiques équipe */}
+              <button 
+                className="dashboard-card direction-card"
+                onClick={() => navigate('/direction/stats')}
+              >
+                <BarChart3 size={20} />
+                <div className="card-content">
+                  <h3>Statistiques Équipe</h3>
+                  <p>KPIs, CA, heures, taux activité</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+            </div>
+          )}
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -478,6 +779,25 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
           </div>
         </div>
       </section>
+
+      {/* Client Mail Synapse */}
+      <MailClient
+        isOpen={isMailClientOpen}
+        onClose={() => {
+          setIsMailClientOpen(false);
+          // Rafraîchir le compteur après fermeture
+          if (mailCredentials) {
+            getUnreadCount(mailCredentials).then(setUnreadMailCount);
+          }
+        }}
+        credentials={mailCredentials}
+        employeeInfo={{
+          prenom: user.prenom,
+          nom: user.nom,
+          titre: user.fonction,
+          telephone: '+41 22 510 50 95'
+        }}
+      />
     </div>
   );
 }

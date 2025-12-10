@@ -532,13 +532,154 @@ body {
   color: var(--color-primary);
 }
 
+.section-icon.reception {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #b45309;
+}
+
+.reception-section {
+  border-left: 4px solid #f59e0b;
+}
+
+.reception-card {
+  border-left: 3px solid #f59e0b !important;
+}
+
+.reception-card:hover {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+}
+
+.reception-mode .section-header {
+  border-bottom-color: #f59e0b;
+}
+
+.reception-cards {
+  border-left: 3px solid #f59e0b;
+  padding-left: 16px;
+  margin-left: -16px;
+}
+
 .section-icon.pro {
   background: #ccfbf1;
   color: var(--color-accent);
 }
 
+.section-icon.direction {
+  background: linear-gradient(135deg, #ddd6fe, #c4b5fd);
+  color: #7c3aed;
+}
+
 .section-icon.ai {
   background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #b45309;
+}
+
+/* =====================================================
+   PRO MODE TOGGLE - Direction/Ostéo
+   ===================================================== */
+
+.pro-mode-toggle {
+  display: flex;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.pro-mode-toggle .mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.pro-mode-toggle .mode-btn:hover {
+  color: #1e293b;
+}
+
+.pro-mode-toggle .mode-btn.active {
+  background: white;
+  color: #0d9488;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pro-section.direction-mode .pro-mode-toggle .mode-btn.active {
+  color: #7c3aed;
+}
+
+/* Direction Section Styling */
+.pro-section.direction-mode {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border: 1px solid #ddd6fe;
+}
+
+.pro-section.direction-mode .section-header h2 {
+  color: #6b21a8;
+}
+
+.pro-section.direction-mode .section-header p {
+  color: #7e22ce;
+}
+
+/* Direction Cards Grid */
+.section-cards.direction-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .section-cards.direction-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Direction Card Styling */
+.dashboard-card.direction-card {
+  background: white;
+  border: 1px solid #e9d5ff;
+  transition: all 0.2s ease;
+}
+
+.dashboard-card.direction-card:hover {
+  border-color: #c084fc;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.dashboard-card.direction-card svg:first-child {
+  color: #8b5cf6;
+}
+
+.dashboard-card.direction-card.highlight.primary {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border-color: #7c3aed;
+}
+
+.dashboard-card.direction-card.highlight.primary svg:first-child,
+.dashboard-card.direction-card.highlight.primary h3,
+.dashboard-card.direction-card.highlight.primary p {
+  color: white;
+}
+
+.dashboard-card.direction-card.highlight.primary .card-arrow {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Badge warning style */
+.card-badge.warning {
+  background: #fef3c7;
   color: #b45309;
 }
 
@@ -1799,6 +1940,33 @@ body {
 
 .security-note svg {
   color: var(--color-warning);
+}
+
+/* Bouton modification coordonnées bancaires */
+.btn-modify-bank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-modify-bank:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-modify-bank svg {
+  color: white;
 }
 
 /* Liste des enfants */

@@ -19,6 +19,13 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },
+        '/mail-api': {
+          target: phpApiBase,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/mail-api/, '/mail-api.php'),
+          timeout: 120000, // 2 minutes pour les requêtes IMAP
+          proxyTimeout: 120000,
+        },
       },
     },
     plugins: [react()],

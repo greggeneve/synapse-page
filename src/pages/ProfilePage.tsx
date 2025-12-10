@@ -369,13 +369,9 @@ export function ProfilePage({ user }: ProfilePageProps) {
               </div>
               <div className="info-grid">
                 <div className="info-item">
-                  <span className="label">Fonction</span>
-                  <span className="value">{profile.hrStatus.statut_dans_societe || '—'}</span>
-                </div>
-                <div className="info-item">
-                  <span className="label">Type de temps de travail</span>
-                  <span className="value">{profile.hrStatus.temps_travail_type || '—'}</span>
-                </div>
+                      <span className="label">Fonction</span>
+                      <span className="value">{profile.hrStatus.statut_dans_societe || '—'}</span>
+                    </div>
                 <div className="info-item">
                   <span className="label">Date d'entrée</span>
                   <span className="value">{formatDate(profile.hrStatus.date_entree)}</span>
@@ -625,7 +621,7 @@ export function ProfilePage({ user }: ProfilePageProps) {
                   <h3>Commissions & Intéressement</h3>
                 </div>
                 <div className="info-grid">
-                  {profile.bonuses.a_prime_interessement_CA && profile.bonuses.taux_interessement_CA && profile.bonuses.taux_interessement_CA > 0 && (
+                  {profile.bonuses.a_prime_interessement_CA && Number(profile.bonuses.taux_interessement_CA) > 0 && (
                     <div className="info-item">
                       <span className="label">Intéressement CA</span>
                       <span className="value success">
@@ -633,7 +629,7 @@ export function ProfilePage({ user }: ProfilePageProps) {
                       </span>
                     </div>
                   )}
-                  {profile.bonuses.remunere_pour_rapports && profile.bonuses.taux_rapports && profile.bonuses.taux_rapports > 0 && (
+                  {profile.bonuses.remunere_pour_rapports && Number(profile.bonuses.taux_rapports) > 0 && (
                     <div className="info-item">
                       <span className="label">Rémunération rapports assurance</span>
                       <span className="value success">
@@ -642,10 +638,10 @@ export function ProfilePage({ user }: ProfilePageProps) {
                     </div>
                   )}
                   {profile.bonuses.soumis_clause_non_concurrence && (
-                    <div className="info-item">
+                    <div className="info-item full-width">
                       <span className="label">Clause de non-concurrence</span>
                       <span className="value warning">
-                        ⚠ Active
+                        ⚠ Active{profile.bonuses.taux_clause_NC ? ` (${profile.bonuses.taux_clause_NC}%)` : ''}
                       </span>
                     </div>
                   )}
@@ -684,10 +680,13 @@ export function ProfilePage({ user }: ProfilePageProps) {
                 )}
               </div>
               <div className="card-footer">
-                <p className="security-note">
+                <button 
+                  className="btn-modify-bank"
+                  onClick={() => navigate('/employee/bank')}
+                >
                   <Shield size={14} />
-                  La modification des coordonnées bancaires nécessite une validation sécurisée
-                </p>
+                  Modifier mes coordonnées bancaires
+                </button>
               </div>
             </div>
           </div>

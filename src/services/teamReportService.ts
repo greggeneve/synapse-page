@@ -112,7 +112,7 @@ export async function getReportTeam(): Promise<ReportTeamMember[]> {
     const result = await query<{ employee_id: number; profile_json: any }>(
       `SELECT employee_id, profile_json 
        FROM employees 
-       WHERE JSON_EXTRACT(profile_json, '$.hrStatus.collaborateur_actif') = true
+       WHERE JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
        ORDER BY employee_id`,
       []
     );

@@ -182,16 +182,16 @@ export async function getEmployeeProfile(employeeId: number): Promise<EmployeePr
         contact_urgence_nom: profile.contact?.contact_urgence_nom,
         contact_urgence_telephone: profile.contact?.contact_urgence_telephone,
         residence_fiscale: profile.contact?.residence_fiscale || '',
-        soumis_impot_source: profile.contact?.soumis_impot_source || false,
+        soumis_impot_source: profile.contact?.soumis_impot_source === true || profile.contact?.soumis_impot_source === 'true',
         code_tarif_IaS_actuel: profile.contact?.code_tarif_IaS_actuel || '',
-        beneficiaire_allocations_familiales: profile.contact?.beneficiaire_allocations_familiales || false,
+        beneficiaire_allocations_familiales: profile.contact?.beneficiaire_allocations_familiales === true || profile.contact?.beneficiaire_allocations_familiales === 'true',
         nombre_enfants_a_charge: profile.contact?.nombre_enfants_a_charge || 0,
       },
       hrStatus: {
         statut_dans_societe: profile.hrStatus?.statut_dans_societe || '',
         date_entree: profile.hrStatus?.date_entree || '',
         date_sortie: profile.hrStatus?.date_sortie,
-        collaborateur_actif: profile.hrStatus?.collaborateur_actif || false,
+        collaborateur_actif: profile.hrStatus?.collaborateur_actif === true || profile.hrStatus?.collaborateur_actif === 'true',
         taux_activite_contractuel_reference: profile.hrStatus?.taux_activite_contractuel_reference || 100,
         temps_travail_type: profile.hrStatus?.temps_travail_type || '',
         droit_vacances_semaines: profile.hrStatus?.droit_vacances_semaines,
@@ -203,38 +203,40 @@ export async function getEmployeeProfile(employeeId: number): Promise<EmployeePr
       lpp: {
         plan_LPP: profile.lpp?.plan_LPP || '',
         categorie_LPP: profile.lpp?.categorie_LPP || '',
-        soumis_LPP: profile.lpp?.soumis_LPP || false,
+        soumis_LPP: profile.lpp?.soumis_LPP === true || profile.lpp?.soumis_LPP === 'true',
         cle_repartition_LPP: profile.lpp?.cle_repartition_LPP,
         part_employe_pourcent: profile.lpp?.part_employe_pourcent,
         part_employeur_pourcent: profile.lpp?.part_employeur_pourcent,
       },
       bonuses: {
-        // 13ème salaire
-        has_thirteenth_salary: current13th?.actif ?? true,
+        // 13ème salaire (seulement si historique existe ET actif)
+        has_thirteenth_salary: current13th 
+          ? (current13th.actif === true || current13th.actif === 'true')
+          : false,
         thirteenth_salary_mode: current13th?.mode_calcul || 'Automatique',
-        // Primes
-        a_prime_assiduite: profile.bonuses?.a_prime_assiduite,
+        // Primes (convertir en booléens car JSON peut retourner "true"/"false" strings)
+        a_prime_assiduite: profile.bonuses?.a_prime_assiduite === true || profile.bonuses?.a_prime_assiduite === 'true',
         montant_prime_assiduite: profile.bonuses?.montant_prime_assiduite_mensuelle,
-        a_prime_natel: profile.bonuses?.a_prime_natel,
-        a_prime_entretien_blouses: profile.bonuses?.a_prime_entretien_blouses,
+        a_prime_natel: profile.bonuses?.a_prime_natel === true || profile.bonuses?.a_prime_natel === 'true',
+        a_prime_entretien_blouses: profile.bonuses?.a_prime_entretien_blouses === true || profile.bonuses?.a_prime_entretien_blouses === 'true',
         montant_blouses: profile.bonuses?.montant_blouses_100pct,
-        a_prime_interessement_CA: profile.bonuses?.a_prime_interessement_CA,
+        a_prime_interessement_CA: profile.bonuses?.a_prime_interessement_CA === true || profile.bonuses?.a_prime_interessement_CA === 'true',
         taux_interessement_CA: profile.bonuses?.taux_interessement_CA,
         // Non-concurrence
-        soumis_clause_non_concurrence: profile.bonuses?.soumis_clause_non_concurrence,
+        soumis_clause_non_concurrence: profile.bonuses?.soumis_clause_non_concurrence === true || profile.bonuses?.soumis_clause_non_concurrence === 'true',
         taux_clause_NC: profile.bonuses?.taux_renumeration_clause_NC,
         // Rapports
-        remunere_pour_rapports: profile.bonuses?.remunere_pour_rapports_assurance,
+        remunere_pour_rapports: profile.bonuses?.remunere_pour_rapports_assurance === true || profile.bonuses?.remunere_pour_rapports_assurance === 'true',
         taux_rapports: profile.bonuses?.taux_remuneration_rapports,
         // Prestations en nature
-        beneficie_prestations_nature: profile.bonuses?.beneficie_prestations_en_nature,
+        beneficie_prestations_nature: profile.bonuses?.beneficie_prestations_en_nature === true || profile.bonuses?.beneficie_prestations_en_nature === 'true',
         description_prestations_nature: profile.bonuses?.description_prestations_nature,
         montant_prestations_nature: profile.bonuses?.montant_prestations_nature_mensuel_reference,
         // Direction
-        a_prime_direction: profile.bonuses?.a_prime_direction,
+        a_prime_direction: profile.bonuses?.a_prime_direction === true || profile.bonuses?.a_prime_direction === 'true',
         montant_prime_direction: profile.bonuses?.montant_prime_direction,
         // Supervision
-        a_prime_supervision: profile.bonuses?.a_prime_supervision_assistant,
+        a_prime_supervision: profile.bonuses?.a_prime_supervision_assistant === true || profile.bonuses?.a_prime_supervision_assistant === 'true',
         montant_supervision: profile.bonuses?.montant_supervision_assistant,
       },
       bankInfo: profile.bankInfo ? {

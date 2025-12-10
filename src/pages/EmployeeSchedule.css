@@ -726,40 +726,57 @@
   margin: 0 0 16px;
 }
 
-/* Legend */
+/* Section légende compacte */
+.sidebar-section.legend-section {
+  padding: 12px 16px;
+}
+
+.sidebar-section.legend-section h3 {
+  font-size: 0.8rem;
+  margin-bottom: 10px;
+  color: #64748b;
+}
+
+/* Legend - Compact */
 .legend-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.85rem;
-  color: #475569;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.legend-item svg {
+  width: 12px;
+  height: 12px;
 }
 
 .legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 .legend-color.work {
   background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  border-left: 3px solid #3b82f6;
+  border-left: 2px solid #3b82f6;
 }
 
 .legend-color.break {
   background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border-left: 3px solid #f59e0b;
+  border-left: 2px solid #f59e0b;
 }
 
 .legend-color.leave {
   background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  border-left: 3px solid #22c55e;
+  border-left: 2px solid #22c55e;
 }
 
 .legend-item.status-confirmed svg { color: #22c55e; }
@@ -865,6 +882,416 @@
 
 .period-stat svg {
   color: #94a3b8;
+}
+
+/* ========================================
+   PREFERENCES SECTION - IA Planning
+   ======================================== */
+
+.preferences-section {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border: 1px solid #e9d5ff;
+}
+
+.preferences-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #7c3aed;
+}
+
+.preferences-toggle .toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preferences-toggle h3 {
+  margin: 0;
+  color: #7c3aed;
+}
+
+.preferences-toggle .sparkle-icon {
+  color: #a855f7;
+}
+
+.preferences-hint {
+  font-size: 0.75rem;
+  color: #7c3aed;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  background: rgba(167, 139, 250, 0.15);
+  border-radius: 8px;
+  line-height: 1.4;
+}
+
+/* ========================================
+   SENIORITY GAUGE
+   ======================================== */
+
+.seniority-gauge-container {
+  margin-top: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e9d5ff;
+}
+
+.seniority-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.seniority-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b21a8;
+}
+
+.seniority-info {
+  font-size: 0.75rem;
+  color: #a78bfa;
+  cursor: help;
+}
+
+.seniority-scale {
+  margin-bottom: 12px;
+}
+
+.scale-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.scale-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 45%;
+}
+
+.scale-label.left {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.scale-label.right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.scale-label .label-icon {
+  font-size: 1.2rem;
+}
+
+.scale-label .label-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.scale-label .label-desc {
+  font-size: 0.6rem;
+  color: #9ca3af;
+  line-height: 1.2;
+}
+
+.scale-bar {
+  position: relative;
+  padding: 8px 0;
+}
+
+.scale-track {
+  position: relative;
+  height: 8px;
+  background: linear-gradient(90deg, 
+    #fef3c7 0%, 
+    #fde68a 25%, 
+    #a7f3d0 50%, 
+    #6ee7b7 75%, 
+    #34d399 100%
+  );
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.scale-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: transparent;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.scale-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.marker-dot {
+  width: 20px;
+  height: 20px;
+  background: white;
+  border: 3px solid #7c3aed;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.marker-label {
+  position: absolute;
+  top: 24px;
+  white-space: nowrap;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #7c3aed;
+  background: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.scale-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.scale-ticks span {
+  width: 1px;
+  height: 6px;
+  background: #d1d5db;
+}
+
+.seniority-message {
+  font-size: 0.7rem;
+  color: #6b7280;
+  line-height: 1.4;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin: 0;
+  border-left: 3px solid #a78bfa;
+}
+
+.preferences-content {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pref-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pref-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b21a8;
+}
+
+.pref-group label svg {
+  color: #a855f7;
+}
+
+/* Time slots */
+.time-slots {
+  display: flex;
+  gap: 8px;
+}
+
+.time-slot-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  background: white;
+  border: 2px solid #e9d5ff;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  color: #7c3aed;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.time-slot-btn:hover {
+  border-color: #a855f7;
+  background: #faf5ff;
+}
+
+.time-slot-btn.selected {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  border-color: #7c3aed;
+  color: white;
+}
+
+.time-slot-btn.selected svg {
+  color: white;
+}
+
+/* Days grid */
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-pref {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.day-pref .day-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #6b21a8;
+  text-transform: capitalize;
+}
+
+.day-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.day-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid #e9d5ff;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.day-btn.prefer:hover,
+.day-btn.prefer.active {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #16a34a;
+}
+
+.day-btn.avoid:hover,
+.day-btn.avoid.active {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+.legend-mini {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.legend-mini span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+.legend-mini .text-green {
+  color: #22c55e;
+}
+
+.legend-mini .text-red {
+  color: #ef4444;
+}
+
+/* Textareas */
+.pref-group textarea {
+  padding: 10px 12px;
+  border: 1px solid #e9d5ff;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+  transition: all 0.2s;
+}
+
+.pref-group textarea:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.pref-group textarea::placeholder {
+  color: #a78bfa;
+}
+
+/* Save button */
+.btn-save-prefs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-save-prefs:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+}
+
+.btn-save-prefs:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-save-prefs.saved {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.btn-save-prefs .spin {
+  animation: spin 1s linear infinite;
+}
+
+.last-updated {
+  font-size: 0.7rem;
+  color: #9333ea;
+  text-align: center;
+  margin: 8px 0 0;
 }
 
 /* Responsive */

@@ -12,6 +12,9 @@ export interface TeamMember {
   isSuperAdmin?: boolean;
   isAdmin?: boolean;
   impersonating?: string; // Nom de l'admin qui impersonne
+  // Rôles de direction
+  isDirecteur?: boolean;
+  isDirecteurAdjoint?: boolean;
 }
 
 export interface Report {

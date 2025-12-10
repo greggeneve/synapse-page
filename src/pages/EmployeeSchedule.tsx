@@ -23,8 +23,16 @@ import {
   Moon,
   Palmtree,
   ArrowLeftRight,
-  Info
+  Info,
+  Sparkles,
+  Heart,
+  MessageSquare,
+  Save,
+  Loader2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
+import { query } from '../services/mariadb';
 import './EmployeeSchedule.css';
 
 type ViewMode = 'day' | 'week' | 'month';
@@ -56,6 +64,29 @@ interface PendingRequest {
   description: string;
   status: 'pending' | 'approved' | 'rejected';
   submittedAt: string;
+}
+
+interface SchedulingPreferences {
+  // Préférences horaires
+  preferred_time_slots: ('morning' | 'afternoon' | 'evening')[];
+  preferred_days: string[]; // 'lundi', 'mardi', etc.
+  avoided_days: string[];
+  // Contraintes récurrentes
+  recurring_constraints: string; // Texte libre
+  // Impératifs connus à l'avance
+  future_constraints: string; // Texte libre
+  // Notes générales pour l'IA
+  notes_for_ai: string;
+  // Métadonnées
+  last_updated?: string;
+}
+
+interface SeniorityScore {
+  score: number; // 0-100
+  level: 'new' | 'growing' | 'established' | 'senior';
+  patientDemand: number; // Nombre moyen de demandes/semaine
+  avgWaitTime: number; // Temps d'attente moyen en jours
+  lastCalculated?: string;
 }
 
 // Données de démonstration
@@ -107,7 +138,11 @@ const DEMO_REQUESTS: PendingRequest[] = [
   }
 ];
 
-export function EmployeeSchedule() {
+interface EmployeeScheduleProps {
+  user?: { id: number; employee_id?: number } | null;
+}
+
+export function EmployeeSchedule({ user }: EmployeeScheduleProps = {}) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -116,6 +151,150 @@ export function EmployeeSchedule() {
   const [requests, setRequests] = useState<PendingRequest[]>(DEMO_REQUESTS);
   const [loading, setLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<WorkSlot | null>(null);
+  
+  // Préférences horaires pour l'IA
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [prefsSaved, setPrefsSaved] = useState(false);
+  const [preferences, setPreferences] = useState<SchedulingPreferences>({
+    preferred_time_slots: [],
+    preferred_days: [],
+    avoided_days: [],
+    recurring_constraints: '',
+    future_constraints: '',
+    notes_for_ai: ''
+  });
+  
+  // Score de séniorité/demande patient
+  const [seniorityScore, setSeniorityScore] = useState<SeniorityScore>({
+    score: 25, // Valeur par défaut pour nouveaux
+    level: 'new',
+    patientDemand: 0,
+    avgWaitTime: 0
+  });
+
+  const employeeId = user?.employee_id || user?.id;
+  const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+
+  // Charger les préférences au démarrage
+  useEffect(() => {
+    if (employeeId) {
+      loadPreferences();
+    }
+  }, [employeeId]);
+
+  const loadPreferences = async () => {
+    if (!employeeId) return;
+    try {
+      const result = await query<any>(
+        `SELECT 
+           JSON_EXTRACT(profile_json, '$.scheduling_preferences') as prefs,
+           JSON_EXTRACT(profile_json, '$.seniority_score') as seniority,
+           JSON_EXTRACT(profile_json, '$.hrStatus.date_entree') as date_entree
+         FROM employees WHERE employee_id = ?`,
+        [employeeId]
+      );
+      if (result.success && result.data?.[0]) {
+        const row = result.data[0];
+        
+        // Charger préférences
+        if (row.prefs) {
+          const prefs = typeof row.prefs === 'string' 
+            ? JSON.parse(row.prefs) 
+            : row.prefs;
+          if (prefs) {
+            setPreferences(prev => ({ ...prev, ...prefs }));
+          }
+        }
+        
+        // Charger ou calculer score séniorité
+        if (row.seniority) {
+          const seniority = typeof row.seniority === 'string'
+            ? JSON.parse(row.seniority)
+            : row.seniority;
+          if (seniority) {
+            setSeniorityScore(seniority);
+          }
+        } else if (row.date_entree) {
+          // Calculer un score basique basé sur l'ancienneté
+          const dateEntree = new Date(row.date_entree.replace(/"/g, ''));
+          const monthsWorked = Math.floor((Date.now() - dateEntree.getTime()) / (1000 * 60 * 60 * 24 * 30));
+          const calculatedScore = Math.min(100, Math.max(5, monthsWorked * 2));
+          
+          let level: SeniorityScore['level'] = 'new';
+          if (calculatedScore >= 75) level = 'senior';
+          else if (calculatedScore >= 50) level = 'established';
+          else if (calculatedScore >= 25) level = 'growing';
+          
+          setSeniorityScore({
+            score: calculatedScore,
+            level,
+            patientDemand: 0,
+            avgWaitTime: 0
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Erreur chargement préférences:', e);
+    }
+  };
+
+  const savePreferences = async () => {
+    if (!employeeId) return;
+    setSavingPrefs(true);
+    try {
+      const prefsToSave = {
+        ...preferences,
+        last_updated: new Date().toISOString()
+      };
+      
+      await query(
+        `UPDATE employees 
+         SET profile_json = JSON_SET(profile_json, '$.scheduling_preferences', CAST(? AS JSON))
+         WHERE employee_id = ?`,
+        [JSON.stringify(prefsToSave), employeeId]
+      );
+      
+      setPrefsSaved(true);
+      setTimeout(() => setPrefsSaved(false), 3000);
+    } catch (e) {
+      console.error('Erreur sauvegarde préférences:', e);
+      alert('Erreur lors de la sauvegarde');
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  const toggleTimeSlot = (slot: 'morning' | 'afternoon' | 'evening') => {
+    setPreferences(prev => ({
+      ...prev,
+      preferred_time_slots: prev.preferred_time_slots.includes(slot)
+        ? prev.preferred_time_slots.filter(s => s !== slot)
+        : [...prev.preferred_time_slots, slot]
+    }));
+  };
+
+  const togglePreferredDay = (day: string) => {
+    setPreferences(prev => ({
+      ...prev,
+      preferred_days: prev.preferred_days.includes(day)
+        ? prev.preferred_days.filter(d => d !== day)
+        : [...prev.preferred_days, day],
+      // Retirer des jours évités si on le met en préféré
+      avoided_days: prev.avoided_days.filter(d => d !== day)
+    }));
+  };
+
+  const toggleAvoidedDay = (day: string) => {
+    setPreferences(prev => ({
+      ...prev,
+      avoided_days: prev.avoided_days.includes(day)
+        ? prev.avoided_days.filter(d => d !== day)
+        : [...prev.avoided_days, day],
+      // Retirer des jours préférés si on le met en évité
+      preferred_days: prev.preferred_days.filter(d => d !== day)
+    }));
+  };
 
   // Navigation
   const goToday = () => setCurrentDate(new Date());
@@ -501,7 +680,7 @@ export function EmployeeSchedule() {
         {/* Sidebar */}
         <aside className="schedule-sidebar">
           {/* Légende */}
-          <div className="sidebar-section">
+          <div className="sidebar-section legend-section">
             <h3>Légende</h3>
             <div className="legend-list">
               <div className="legend-item">
@@ -558,6 +737,219 @@ export function EmployeeSchedule() {
               <Plus size={16} />
               Nouvelle demande
             </button>
+          </div>
+
+          {/* Préférences pour l'IA */}
+          <div className="sidebar-section preferences-section">
+            <button 
+              className="preferences-toggle"
+              onClick={() => setShowPreferences(!showPreferences)}
+            >
+              <div className="toggle-left">
+                <Sparkles size={18} className="sparkle-icon" />
+                <h3>Mes préférences</h3>
+              </div>
+              {showPreferences ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+            
+            <p className="preferences-hint">
+              🤖 Ces informations aident l'IA à créer un planning qui vous convient
+            </p>
+
+            {/* Jauge de séniorité - toujours visible */}
+            <div className="seniority-gauge-container">
+              <div className="seniority-header">
+                <span className="seniority-title">Votre positionnement</span>
+                <span className="seniority-info" title="Basé sur l'ancienneté et les statistiques de demandes patients (bientôt)">ⓘ</span>
+              </div>
+              
+              <div className="seniority-scale">
+                <div className="scale-labels">
+                  <div className="scale-label left">
+                    <span className="label-icon">🌱</span>
+                    <span className="label-text">Nouveau</span>
+                    <span className="label-desc">Je m'adapte au planning</span>
+                  </div>
+                  <div className="scale-label right">
+                    <span className="label-icon">⭐</span>
+                    <span className="label-text">Sénior</span>
+                    <span className="label-desc">Les patients s'adaptent</span>
+                  </div>
+                </div>
+                
+                <div className="scale-bar">
+                  <div className="scale-track">
+                    <div 
+                      className="scale-fill"
+                      style={{ width: `${seniorityScore.score}%` }}
+                    />
+                    <div 
+                      className="scale-marker"
+                      style={{ left: `${seniorityScore.score}%` }}
+                    >
+                      <div className="marker-dot" />
+                      <div className="marker-label">
+                        {seniorityScore.level === 'new' && 'En construction'}
+                        {seniorityScore.level === 'growing' && 'En progression'}
+                        {seniorityScore.level === 'established' && 'Établi'}
+                        {seniorityScore.level === 'senior' && 'Référent'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="scale-ticks">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="seniority-message">
+                {seniorityScore.level === 'new' && (
+                  <>💡 En tant que nouveau praticien, votre planning sera optimisé pour maximiser votre visibilité et construire votre patientèle.</>
+                )}
+                {seniorityScore.level === 'growing' && (
+                  <>📈 Votre patientèle se développe ! Vos préférences sont prises en compte tout en maintenant une bonne accessibilité.</>
+                )}
+                {seniorityScore.level === 'established' && (
+                  <>✨ Vous avez une patientèle fidèle. Vos préférences horaires ont plus de poids dans la planification.</>
+                )}
+                {seniorityScore.level === 'senior' && (
+                  <>🌟 Praticien de référence ! Les patients s'organisent selon vos disponibilités.</>
+                )}
+              </p>
+            </div>
+
+            {showPreferences && (
+              <div className="preferences-content">
+                {/* Créneaux préférés */}
+                <div className="pref-group">
+                  <label>Je préfère travailler :</label>
+                  <div className="time-slots">
+                    <button
+                      className={`time-slot-btn ${preferences.preferred_time_slots.includes('morning') ? 'selected' : ''}`}
+                      onClick={() => toggleTimeSlot('morning')}
+                    >
+                      <Sun size={16} />
+                      Matin
+                    </button>
+                    <button
+                      className={`time-slot-btn ${preferences.preferred_time_slots.includes('afternoon') ? 'selected' : ''}`}
+                      onClick={() => toggleTimeSlot('afternoon')}
+                    >
+                      <Coffee size={16} />
+                      Après-midi
+                    </button>
+                    <button
+                      className={`time-slot-btn ${preferences.preferred_time_slots.includes('evening') ? 'selected' : ''}`}
+                      onClick={() => toggleTimeSlot('evening')}
+                    >
+                      <Moon size={16} />
+                      Soirée
+                    </button>
+                  </div>
+                </div>
+
+                {/* Jours préférés / évités */}
+                <div className="pref-group">
+                  <label>Jours de la semaine :</label>
+                  <div className="days-grid">
+                    {DAYS.map(day => (
+                      <div key={day} className="day-pref">
+                        <span className="day-name">{day.slice(0, 3)}</span>
+                        <div className="day-buttons">
+                          <button
+                            className={`day-btn prefer ${preferences.preferred_days.includes(day) ? 'active' : ''}`}
+                            onClick={() => togglePreferredDay(day)}
+                            title="Je préfère"
+                          >
+                            <Heart size={12} />
+                          </button>
+                          <button
+                            className={`day-btn avoid ${preferences.avoided_days.includes(day) ? 'active' : ''}`}
+                            onClick={() => toggleAvoidedDay(day)}
+                            title="À éviter"
+                          >
+                            <XCircle size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="legend-mini">
+                    <span><Heart size={10} className="text-green" /> Préféré</span>
+                    <span><XCircle size={10} className="text-red" /> À éviter</span>
+                  </div>
+                </div>
+
+                {/* Contraintes récurrentes */}
+                <div className="pref-group">
+                  <label>
+                    <Clock size={14} />
+                    Contraintes récurrentes
+                  </label>
+                  <textarea
+                    value={preferences.recurring_constraints}
+                    onChange={e => setPreferences(prev => ({ ...prev, recurring_constraints: e.target.value }))}
+                    placeholder="Ex: Pas le mercredi après-midi (garde d'enfant), jamais après 18h..."
+                    rows={3}
+                  />
+                </div>
+
+                {/* Impératifs futurs */}
+                <div className="pref-group">
+                  <label>
+                    <Calendar size={14} />
+                    Impératifs connus à l'avance
+                  </label>
+                  <textarea
+                    value={preferences.future_constraints}
+                    onChange={e => setPreferences(prev => ({ ...prev, future_constraints: e.target.value }))}
+                    placeholder="Ex: Rendez-vous médical le 15/01, formation du 20 au 22/02..."
+                    rows={3}
+                  />
+                </div>
+
+                {/* Notes libres */}
+                <div className="pref-group">
+                  <label>
+                    <MessageSquare size={14} />
+                    Autres souhaits pour la planification
+                  </label>
+                  <textarea
+                    value={preferences.notes_for_ai}
+                    onChange={e => setPreferences(prev => ({ ...prev, notes_for_ai: e.target.value }))}
+                    placeholder="Tout ce qui peut aider à créer un planning idéal pour vous..."
+                    rows={4}
+                  />
+                </div>
+
+                {/* Bouton sauvegarder */}
+                <button 
+                  className={`btn-save-prefs ${prefsSaved ? 'saved' : ''}`}
+                  onClick={savePreferences}
+                  disabled={savingPrefs}
+                >
+                  {savingPrefs ? (
+                    <><Loader2 size={16} className="spin" /> Sauvegarde...</>
+                  ) : prefsSaved ? (
+                    <><CheckCircle size={16} /> Préférences enregistrées !</>
+                  ) : (
+                    <><Save size={16} /> Enregistrer mes préférences</>
+                  )}
+                </button>
+
+                {preferences.last_updated && (
+                  <p className="last-updated">
+                    Dernière mise à jour : {new Date(preferences.last_updated).toLocaleDateString('fr-CH', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Infos période */}

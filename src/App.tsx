@@ -13,6 +13,12 @@ import { DemoConsultation } from './pages/DemoConsultation';
 import { EmployeeSchedule } from './pages/EmployeeSchedule';
 import { EmployeeDocuments } from './pages/EmployeeDocuments';
 import { EmployeeRme } from './pages/EmployeeRme';
+import { BankAccountPage } from './pages/BankAccountPage';
+import { InsuranceReportsOsteo } from './pages/InsuranceReportsOsteo';
+import { InsuranceReportsReview } from './pages/InsuranceReportsReview';
+import { InsuranceReportsUpload } from './pages/InsuranceReportsUpload';
+import { InsuranceReportsDashboard } from './pages/InsuranceReportsDashboard';
+import { InsuranceReportDetail } from './pages/InsuranceReportDetail';
 import type { TeamMember } from './types';
 import './App.css';
 
@@ -129,6 +135,46 @@ function App() {
           } 
         />
 
+        {/* Espace Pro - Rapports d'Assurance (Ostéo) */}
+        <Route 
+          path="/pro/insurance-reports" 
+          element={
+            user ? <InsuranceReportsOsteo user={user} /> : <Navigate to="/login" replace />
+          } 
+        />
+
+        {/* Direction - Supervision Rapports d'Assurance */}
+        <Route 
+          path="/direction/reports-review" 
+          element={
+            user ? <InsuranceReportsReview user={user} /> : <Navigate to="/login" replace />
+          } 
+        />
+
+        {/* Accueil - Upload Rapports d'Assurance */}
+        <Route 
+          path="/reception/insurance-upload" 
+          element={
+            user ? <InsuranceReportsUpload user={user} /> : <Navigate to="/login" replace />
+          } 
+        />
+
+        {/* Tableau de bord Rapports d'Assurance (Direction & Admin) */}
+        <Route 
+          path="/insurance-reports" 
+          element={
+            user ? <InsuranceReportsDashboard user={user} /> : <Navigate to="/login" replace />
+          } 
+        />
+
+        {/* Détail rapport assurance */}
+        <Route
+          path="/insurance-report/:id"
+          element={
+            user ? <InsuranceReportDetail user={user} /> : <Navigate to="/login" replace />
+          }
+        />
+
         {/* Profil employé */}
         <Route 
           path="/employee/profile" 
@@ -149,7 +195,7 @@ function App() {
         <Route 
           path="/employee/schedule" 
           element={
-            user ? <EmployeeSchedule /> : <Navigate to="/login" replace />
+            user ? <EmployeeSchedule user={user} /> : <Navigate to="/login" replace />
           } 
         />
 
@@ -166,6 +212,14 @@ function App() {
           path="/employee/rme" 
           element={
             user ? <EmployeeRme user={user} /> : <Navigate to="/login" replace />
+          } 
+        />
+
+        {/* Espace Employé - Coordonnées Bancaires */}
+        <Route 
+          path="/employee/bank" 
+          element={
+            user ? <BankAccountPage user={user} /> : <Navigate to="/login" replace />
           } 
         />
 
@@ -191,6 +245,20 @@ function App() {
               <div className="coming-soon">
                 <h1>Espace Pro</h1>
                 <p>Cette section sera bientôt disponible</p>
+                <button onClick={() => window.history.back()}>← Retour</button>
+              </div>
+            ) : <Navigate to="/login" replace />
+          } 
+        />
+
+        {/* Pages à venir - Espace Direction */}
+        <Route 
+          path="/direction/*" 
+          element={
+            user ? (
+              <div className="coming-soon direction">
+                <h1>Espace Direction</h1>
+                <p>Cette fonctionnalité de gestion d'équipe sera bientôt disponible</p>
                 <button onClick={() => window.history.back()}>← Retour</button>
               </div>
             ) : <Navigate to="/login" replace />

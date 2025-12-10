@@ -8,7 +8,7 @@ export async function getActiveTeamMembers(): Promise<TeamMember[]> {
       employee_id,
       profile_json
     FROM employees 
-    WHERE JSON_EXTRACT(profile_json, '$.hrStatus.collaborateur_actif') = true
+    WHERE JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
     ORDER BY JSON_EXTRACT(profile_json, '$.identification.nom')
   `);
 
