@@ -35,6 +35,7 @@ export function PdfAnnotator({ pdfBase64, onSave, existingAnnotations = [] }: Pd
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [justDroppedId, setJustDroppedId] = useState<string | null>(null);
 
   // Ajouter une nouvelle annotation au clic
   const handleContainerClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -108,10 +109,14 @@ export function PdfAnnotator({ pdfBase64, onSave, existingAnnotations = [] }: Pd
     );
   }, [draggingId, dragOffset]);
 
-  // Fin du drag
+  // Fin du drag avec feedback visuel
   const handleDragEnd = useCallback(() => {
+    if (draggingId) {
+      setJustDroppedId(draggingId);
+      setTimeout(() => setJustDroppedId(null), 300);
+    }
     setDraggingId(null);
-  }, []);
+  }, [draggingId]);
 
   // Sauvegarder le PDF avec les annotations
   const handleSave = useCallback(async () => {
@@ -272,7 +277,7 @@ export function PdfAnnotator({ pdfBase64, onSave, existingAnnotations = [] }: Pd
             .map(annotation => (
               <div
                 key={annotation.id}
-                className={`annotation ${activeAnnotation === annotation.id ? 'active' : ''} ${draggingId === annotation.id ? 'dragging' : ''}`}
+                className={`annotation ${activeAnnotation === annotation.id ? 'active' : ''} ${draggingId === annotation.id ? 'dragging' : ''} ${justDroppedId === annotation.id ? 'just-dropped' : ''}`}
                 style={{
                   left: `${annotation.x}%`,
                   top: `${annotation.y}%`,
