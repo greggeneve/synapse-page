@@ -33,6 +33,8 @@ export function PdfAnnotator({ pdfBase64, onSave, existingAnnotations = [] }: Pd
   const [fontSize, setFontSize] = useState(12);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Ajouter une nouvelle annotation au clic
   const handleContainerClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -67,6 +69,48 @@ export function PdfAnnotator({ pdfBase64, onSave, existingAnnotations = [] }: Pd
   const deleteAnnotation = useCallback((id: string) => {
     setAnnotations(prev => prev.filter(ann => ann.id !== id));
     setActiveAnnotation(null);
+  }, []);
+
+  // Démarrer le drag d'une annotation
+  const handleDragStart = useCallback((e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    const annotation = annotations.find(a => a.id === id);
+    if (!annotation || !containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const annX = (annotation.x / 100) * rect.width;
+    const annY = (annotation.y / 100) * rect.height;
+    
+    setDragOffset({
+      x: e.clientX - rect.left - annX,
+      y: e.clientY - rect.top - annY
+    });
+    setDraggingId(id);
+    setActiveAnnotation(id);
+  }, [annotations]);
+
+  // Déplacer pendant le drag
+  const handleDragMove = useCallback((e: React.MouseEvent) => {
+    if (!draggingId || !containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const newX = ((e.clientX - rect.left - dragOffset.x) / rect.width) * 100;
+    const newY = ((e.clientY - rect.top - dragOffset.y) / rect.height) * 100;
+    
+    // Limiter aux bordures
+    const clampedX = Math.max(0, Math.min(100, newX));
+    const clampedY = Math.max(0, Math.min(100, newY));
+    
+    setAnnotations(prev =>
+      prev.map(ann => ann.id === draggingId ? { ...ann, x: clampedX, y: clampedY } : ann)
+    );
+  }, [draggingId, dragOffset]);
+
+  // Fin du drag
+  const handleDragEnd = useCallback(() => {
+    setDraggingId(null);
   }, []);
 
   // Sauvegarder le PDF avec les annotations
@@ -217,17 +261,24 @@ export function PdfAnnotator({ pdfBase64, onSave, existingAnnotations = [] }: Pd
         />
 
         {/* Couche d'annotations */}
-        <div className="annotations-layer">
+        <div 
+          className="annotations-layer"
+          onMouseMove={handleDragMove}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={handleDragEnd}
+        >
           {annotations
             .filter(ann => ann.page === currentPage)
             .map(annotation => (
               <div
                 key={annotation.id}
-                className={`annotation ${activeAnnotation === annotation.id ? 'active' : ''}`}
+                className={`annotation ${activeAnnotation === annotation.id ? 'active' : ''} ${draggingId === annotation.id ? 'dragging' : ''}`}
                 style={{
                   left: `${annotation.x}%`,
                   top: `${annotation.y}%`,
+                  cursor: draggingId ? 'grabbing' : 'grab',
                 }}
+                onMouseDown={(e) => handleDragStart(e, annotation.id)}
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveAnnotation(annotation.id);

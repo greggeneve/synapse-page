@@ -230,3 +230,25 @@
     margin-top: 8px;
   }
 }
+
+/* Drag & Drop des annotations */
+.annotation {
+  cursor: grab;
+  user-select: none;
+}
+
+.annotation:active,
+.annotation.dragging {
+  cursor: grabbing;
+  opacity: 0.8;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.annotation textarea {
+  cursor: text;
+}
+
+.annotations-layer {
+  pointer-events: auto;
+}
