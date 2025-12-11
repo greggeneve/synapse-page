@@ -198,6 +198,7 @@ export async function getPendingAssignmentReports(): Promise<InsuranceReport[]> 
     ORDER BY COALESCE(due_date, '9999-12-31') ASC, created_at ASC
   `);
 
+  console.log("[OsteoReports] Résultat:", result.data?.length || 0, "rapports");
   return (result.data || []).map(parseReport);
 }
 
@@ -205,6 +206,7 @@ export async function getPendingAssignmentReports(): Promise<InsuranceReport[]> 
  * Récupérer les rapports assignés à un ostéo
  */
 export async function getOsteoReports(osteoId: number): Promise<InsuranceReport[]> {
+  console.log("[OsteoReports] Chargement pour osteoId:", osteoId);
   const result = await query<any>(`
     SELECT 
       ir.*,
@@ -221,6 +223,7 @@ export async function getOsteoReports(osteoId: number): Promise<InsuranceReport[
       COALESCE(ir.due_date, '9999-12-31') ASC
   `, [osteoId]);
 
+  console.log("[OsteoReports] Résultat:", result.data?.length || 0, "rapports");
   return (result.data || []).map(parseReport);
 }
 
