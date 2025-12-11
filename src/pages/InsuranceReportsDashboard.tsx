@@ -268,7 +268,7 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
     try {
       const result = await assignToOsteo(reportToAssign.id, selectedOsteoId as number, parseInt(user.id));
       if (result.success) {
-        const osteoName = osteoList.find(o => o.id === selectedOsteoId)?.name || 'l'"'"'ostéopathe';
+        const osteoName = osteoList.find(o => o.id === selectedOsteoId)?.name || 'Ostéopathe';
         alert('✅ Rapport attribué à ' + osteoName + '\n\nIl recevra une notification.');
         setShowAssignModal(false);
         setReportToAssign(null);
