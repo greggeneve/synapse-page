@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -227,10 +228,36 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
         )}
       </div>
 
-      {/* Modal de prévisualisation - Plein écran avec 2 colonnes */}
-      {selectedReport && (
-        <div className="report-modal">
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+      {/* Modal de prévisualisation - Plein écran (Portal dans body) */}
+      {selectedReport && createPortal(
+        <div 
+          className="report-modal"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(15, 23, 42, 0.95)',
+            zIndex: 9999,
+            display: 'flex',
+            margin: 0,
+            padding: 0
+          }}
+        >
+          <div 
+            className="modal-content" 
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'white'
+            }}
+          >
             <div className="modal-header">
               <div className="modal-title">
                 <FileText size={24} />
@@ -246,9 +273,29 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
             </div>
 
             {/* Layout 2 colonnes */}
-            <div className="modal-body-split">
+            <div 
+              className="modal-body-split"
+              style={{
+                display: 'flex',
+                flex: 1,
+                minHeight: 0,
+                overflow: 'hidden'
+              }}
+            >
               {/* Colonne gauche : Infos + Séances du patient */}
-              <div className="modal-left-panel">
+              <div 
+                className="modal-left-panel"
+                style={{
+                  width: '350px',
+                  minWidth: '350px',
+                  maxWidth: '350px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderRight: '1px solid #e2e8f0',
+                  overflowY: 'auto',
+                  background: 'white'
+                }}
+              >
                 {/* Info du rapport */}
                 <div className="modal-info">
                   <div className="info-grid">
@@ -322,12 +369,31 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               </div>
 
               {/* Colonne droite : PDF plein écran */}
-              <div className="modal-pdf">
+              <div 
+                className="modal-pdf"
+                style={{
+                  flex: 1,
+                  position: 'relative',
+                  background: '#4b5563',
+                  minWidth: 0,
+                  overflow: 'hidden'
+                }}
+              >
                 {selectedReport.original_pdf ? (
-                  <iframe
-                    src={`data:application/pdf;base64,${selectedReport.original_pdf}#view=FitH`}
-                    title="Aperçu du rapport"
-                  />
+                  <object
+                    data={`data:application/pdf;base64,${selectedReport.original_pdf}#toolbar=1&view=FitH&zoom=page-width`}
+                    type="application/pdf"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      border: 'none'
+                    }}
+                  >
+                    <p>Impossible d'afficher le PDF. <a href={`data:application/pdf;base64,${selectedReport.original_pdf}`} download="rapport.pdf">Télécharger</a></p>
+                  </object>
                 ) : (
                   <div className="no-preview">
                     <FileText size={48} />
@@ -354,7 +420,8 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
