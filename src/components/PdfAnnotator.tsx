@@ -111,9 +111,16 @@ export function PdfAnnotator({ pdfBase64, onSave, existingAnnotations = [] }: Pd
 
       // Sauvegarder le PDF modifié
       const modifiedPdfBytes = await pdfDoc.save();
-      const modifiedBase64 = btoa(
-        String.fromCharCode(...new Uint8Array(modifiedPdfBytes))
-      );
+      
+      // Conversion base64 par chunks pour éviter stack overflow sur gros PDFs
+      const uint8Array = new Uint8Array(modifiedPdfBytes);
+      let binary = '';
+      const chunkSize = 8192; // 8KB par chunk
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      const modifiedBase64 = btoa(binary);
 
       onSave(modifiedBase64, annotations);
       alert('PDF sauvegardé avec succès !');
