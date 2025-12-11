@@ -111,11 +111,11 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
         loadReports();
       } else {
         console.error('Erreur sauvegarde:', result.error);
-        alert(`Erreur lors de la sauvegarde: \${result.error}`);
+        alert(`Erreur lors de la sauvegarde: ${result.error}`);
       }
     } catch (error: any) {
       console.error('Erreur sauvegarde PDF:', error);
-      alert(`Erreur: \${error.message}`);
+      alert(`Erreur: ${error.message}`);
     }
   };
 
