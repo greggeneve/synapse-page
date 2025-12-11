@@ -237,7 +237,7 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0,0,0,0.7)',
+            background: 'rgba(0,0,0,0.6)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -252,8 +252,6 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
             style={{
               width: '95vw',
               height: '95vh',
-              minWidth: '800px',
-              minHeight: '500px',
               background: 'white',
               borderRadius: '12px',
               display: 'flex',
@@ -291,8 +289,7 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               <div 
                 className="modal-left-panel"
                 style={{
-                  width: '600px',
-                  minWidth: '600px',
+                  flex: 1,
                   display: 'flex',
                   flexDirection: 'column',
                   borderRight: '1px solid #e2e8f0',
