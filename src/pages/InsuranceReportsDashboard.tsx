@@ -311,7 +311,6 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
     critical: reports.filter(r => r.days_since_received > 15).length,
     needsCorrection: reports.filter(r => r.status === 'needs_correction').length
   };
-  };
 
   // Stats par ostéopathe
   const osteoStats = osteoList.map(osteo => {
