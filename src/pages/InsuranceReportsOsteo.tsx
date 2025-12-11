@@ -293,8 +293,8 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               <div 
                 className="modal-left-panel"
                 style={{
-                  width: '500px',
-                  minWidth: '500px',
+                  width: '600px',
+                  minWidth: '600px',
                   display: 'flex',
                   flexDirection: 'column',
                   borderRight: '1px solid #e2e8f0',
