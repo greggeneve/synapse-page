@@ -470,6 +470,19 @@ export async function archiveReport(reportId: number, archivedBy: number): Promi
   return { success: true };
 }
 
+/**
+ * Mettre à jour le PDF rempli d'un rapport
+ */
+export async function updateReportPdf(reportId: number, filledPdfBase64: string): Promise<{ success: boolean }> {
+  await query(`
+    UPDATE insurance_reports 
+    SET filled_pdf = ?, 
+        updated_at = NOW()
+    WHERE id = ?
+  `, [filledPdfBase64, reportId]);
+  return { success: true };
+}
+
 // ===== ANNOTATIONS =====
 
 /**

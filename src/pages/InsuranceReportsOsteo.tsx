@@ -29,9 +29,11 @@ import {
   submitForReview,
   getReportAnnotations,
   saveAnnotations,
+  updateReportPdf,
   type InsuranceReport,
   type ReportAnnotation
 } from '../services/insuranceReportService';
+import { PdfAnnotator } from '../components/PdfAnnotator';
 import type { TeamMember } from '../types';
 import './InsuranceReportsOsteo.css';
 
@@ -85,9 +87,34 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
 
   const handleEditReport = () => {
     if (selectedReport) {
-      // Naviguer vers l'éditeur PDF
-      navigate(`/pro/insurance-reports/${selectedReport.id}/edit`);
+      // Passer en mode édition
+      setIsEditing(true);
     }
+  };
+
+  const handleSaveAnnotatedPdf = async (annotatedPdfBase64: string, annotations: any[]) => {
+    if (!selectedReport) return;
+    
+    try {
+      // Sauvegarder le PDF annoté
+      await updateReportPdf(selectedReport.id, annotatedPdfBase64);
+      
+      // Mettre à jour le rapport local
+      setSelectedReport({
+        ...selectedReport,
+        filled_pdf: annotatedPdfBase64
+      });
+      
+      // Recharger les rapports
+      loadReports();
+    } catch (error) {
+      console.error('Erreur sauvegarde PDF:', error);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedReport(null);
+    setIsEditing(false);
   };
 
   const handleSubmitForReview = async () => {
@@ -369,8 +396,7 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
                 </div>
               </div>
 
-              {/* Colonne droite : PDF plein écran */}
-              {/* PDF avec zoom contrôlable */}
+              {/* Colonne droite : PDF (visualisation ou édition) */}
               <div 
                 className="modal-pdf"
                 style={{
@@ -383,16 +409,24 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
                 }}
               >
                 {selectedReport.original_pdf ? (
-                  <iframe
-                    src={`data:application/pdf;base64,${selectedReport.original_pdf}`}
-                    title="Aperçu du rapport"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      border: 'none',
-                      flex: 1
-                    }}
-                  />
+                  isEditing ? (
+                    <PdfAnnotator
+                      pdfBase64={selectedReport.filled_pdf || selectedReport.original_pdf}
+                      onSave={handleSaveAnnotatedPdf}
+                      existingAnnotations={[]}
+                    />
+                  ) : (
+                    <iframe
+                      src={`data:application/pdf;base64,${selectedReport.filled_pdf || selectedReport.original_pdf}`}
+                      title="Aperçu du rapport"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        flex: 1
+                      }}
+                    />
+                  )
                 ) : (
                   <div className="no-preview" style={{
                     flex: 1,
@@ -411,18 +445,26 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
 
             {/* Actions */}
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setSelectedReport(null)}>
-                Fermer
-              </button>
-              <button className="btn-primary" onClick={handleEditReport}>
-                <Edit3 size={18} />
-                Remplir le rapport
-              </button>
-              {(selectedReport.status === 'in_progress' || selectedReport.status === 'needs_correction') && (
-                <button className="btn-submit" onClick={handleSubmitForReview}>
-                  <Send size={18} />
-                  Soumettre pour validation
+              {isEditing ? (
+                <button className="btn-secondary" onClick={() => setIsEditing(false)}>
+                  ← Retour à la prévisualisation
                 </button>
+              ) : (
+                <>
+                  <button className="btn-secondary" onClick={handleCloseModal}>
+                    Fermer
+                  </button>
+                  <button className="btn-primary" onClick={handleEditReport}>
+                    <Edit3 size={18} />
+                    Remplir le rapport
+                  </button>
+                  {(selectedReport.status === 'in_progress' || selectedReport.status === 'needs_correction') && (
+                    <button className="btn-submit" onClick={handleSubmitForReview}>
+                      <Send size={18} />
+                      Soumettre pour validation
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
