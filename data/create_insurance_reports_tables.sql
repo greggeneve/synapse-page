@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS insurance_reports (
   patient_lastname VARCHAR(100),
   patient_birthdate DATE,
   patient_avs VARCHAR(20),                 -- Numéro AVS si disponible
+  treatment_dates TEXT,                    -- Dates des traitements concernés
   
   -- Fichiers
   original_pdf LONGBLOB,                   -- PDF original scanné

@@ -75,6 +75,7 @@ export interface AIExtractionData {
   detected_patient_birthdate?: string;
   detected_osteo_name?: string;
   detected_reference?: string;
+  detected_treatment_dates?: string;
   raw_text?: string;
   confidence_details?: Record<string, number>;
 }

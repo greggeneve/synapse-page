@@ -40,30 +40,29 @@ export async function extractReportDataFromPDF(
     const prompt = `Tu es un expert en analyse de documents d'assurance medicale suisses. Analyse ce document PDF avec GRANDE ATTENTION.
 
 === MISSION PRINCIPALE ===
-Tu dois identifier QUI est le DESTINATAIRE de ce courrier (l'osteopathe/therapeute a qui s'adresse le document).
+Tu dois extraire TOUTES les informations importantes de ce formulaire d'assurance.
 
 === LISTE DES THERAPEUTES DE NOTRE CABINET ===
 Cherche si UN de ces noms apparait N'IMPORTE OU dans le document :
 ${osteoNames.map(n => `* ${n}`).join('\n')}
 
-REGARDE PARTOUT:
-- Adresse du destinataire
-- "A l'attention de..."
-- "Cher/Chere Monsieur/Madame..."
-- "Concerne le traitement de... chez..."
-- Corps du texte
-- Signature
-- N'importe ou!
+=== INFORMATIONS A EXTRAIRE ===
 
-=== AUTRES INFORMATIONS A EXTRAIRE ===
+1. ASSURANCE: Nom de la compagnie (CSS, Helsana, Swica, Groupe Mutuel, Visana, Sanitas, Assura, SUVA, AXA, etc.)
 
-1. ASSURANCE: Cherche dans l'en-tete, le logo, l'adresse expediteur
-   (CSS, Helsana, Swica, Groupe Mutuel, Visana, Sanitas, Assura, SUVA, AXA, etc.)
-
-2. PATIENT: Nom et prenom de l'assure/patient (souvent en majuscules)
-   + Date de naissance si visible
+2. PATIENT/ASSURE:
+   - Nom et prenom
+   - Date de naissance (TRES IMPORTANT - cherche dans tout le document)
 
 3. REFERENCE: Numero de dossier, sinistre, reference
+
+4. OSTEOPATHE DESTINATAIRE: Le therapeute a qui s'adresse le courrier
+
+5. DATES DES TRAITEMENTS: 
+   - Cherche les dates de consultation/traitement mentionnees
+   - Peut etre une periode (ex: "du 15.03.2024 au 20.05.2024")
+   - Ou des dates specifiques (ex: "consultations des 10.01, 15.02, 20.03.2024")
+   - Cherche dans les tableaux, les questions sur les seances, les periodes de soins
 
 === REPONSE OBLIGATOIRE ===
 Reponds UNIQUEMENT avec ce JSON (RIEN d'autre):
@@ -72,13 +71,15 @@ Reponds UNIQUEMENT avec ce JSON (RIEN d'autre):
   "detected_patient_name": "Prenom NOM du patient ou null",
   "detected_patient_birthdate": "AAAA-MM-DD ou null",
   "detected_reference": "numero ou null",
-  "detected_osteo_name": "Prenom Nom EXACT du therapeute trouve ou null",
-  "raw_findings": "resume: j'ai trouve X dans le document, le destinataire semble etre Y",
-  "confidence": {"insurance": 0.9, "patient": 0.9, "osteo": 0.9}
+  "detected_osteo_name": "Prenom Nom du therapeute ou null",
+  "detected_treatment_dates": "dates des traitements (texte libre) ou null",
+  "raw_findings": "resume de ce que tu as trouve",
+  "confidence": {"insurance": 0.9, "patient": 0.9, "birthdate": 0.9, "osteo": 0.9, "treatment_dates": 0.7}
 }
 
-IMPORTANT: Pour detected_osteo_name, retourne le nom MEME S'IL N'EST PAS dans la liste ci-dessus!
-On veut savoir qui est le destinataire du courrier.`;
+IMPORTANT: 
+- Pour la date de naissance, convertis en format AAAA-MM-DD
+- Pour les dates de traitement, garde le format original du document`;
 
     console.log('[InsuranceAI] Analyse du PDF avec Gemini...');
 
@@ -157,23 +158,21 @@ On veut savoir qui est le destinataire du courrier.`;
         console.log('  Patient:', extractedData.detected_patient_name || 'NON TROUVE');
         console.log('  Naissance:', extractedData.detected_patient_birthdate || 'NON TROUVE');
         console.log('  Reference:', extractedData.detected_reference || 'NON TROUVE');
-        console.log('  OSTEOPATHE/DESTINATAIRE:', extractedData.detected_osteo_name || 'NON TROUVE');
+        console.log('  OSTEOPATHE:', extractedData.detected_osteo_name || 'NON TROUVE');
+        console.log('  DATES TRAITEMENTS:', extractedData.detected_treatment_dates || 'NON TROUVE');
         console.log('  Findings:', extractedData.raw_findings || '');
         console.log('[InsuranceAI] ========================================');
 
         // Verifier si l'osteo detecte est dans notre liste
         let detectedOsteoName = extractedData.detected_osteo_name;
-        let matchedInList = false;
         
         if (detectedOsteoName) {
           const matchedOsteo = findBestOsteoMatch(detectedOsteoName, osteos);
           if (matchedOsteo) {
             detectedOsteoName = `${matchedOsteo.firstname} ${matchedOsteo.lastname}`;
-            matchedInList = true;
             console.log(`[InsuranceAI] Osteo TROUVE dans notre liste: ${detectedOsteoName} (ID: ${matchedOsteo.id})`);
           } else {
             console.log(`[InsuranceAI] ATTENTION: "${detectedOsteoName}" n'est PAS dans notre liste d'employes actifs!`);
-            console.log(`[InsuranceAI] Verifiez que cet employe est bien actif dans la base de donnees.`);
           }
         }
 
@@ -181,8 +180,9 @@ On veut savoir qui est le destinataire du courrier.`;
           detected_insurance: extractedData.detected_insurance,
           detected_patient_name: extractedData.detected_patient_name,
           detected_patient_birthdate: extractedData.detected_patient_birthdate,
-          detected_osteo_name: detectedOsteoName, // On garde le nom meme s'il n'est pas dans la liste
+          detected_osteo_name: detectedOsteoName,
           detected_reference: extractedData.detected_reference,
+          detected_treatment_dates: extractedData.detected_treatment_dates,
           confidence_details: extractedData.confidence || {}
         };
 
@@ -259,13 +259,11 @@ export async function findOsteoByName(name: string): Promise<number | null> {
  * Recuperer la liste de TOUS les employes actifs (therapeutes potentiels)
  */
 async function getOsteoList(): Promise<OsteoInfo[]> {
-  // On recupere TOUS les employes actifs pour maximiser les chances de match
   const result = await query<any>(`
     SELECT 
       employee_id as id,
       JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.identification.prenom')) AS firstname,
-      JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.identification.nom')) AS lastname,
-      JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.hrStatus.statut_dans_societe')) AS fonction
+      JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.identification.nom')) AS lastname
     FROM employees
     WHERE JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
   `);
@@ -281,70 +279,13 @@ async function getOsteoList(): Promise<OsteoInfo[]> {
 }
 
 /**
- * Chercher un patient dans agenda.ch par nom/prenom/date de naissance
- */
-export async function findPatientInAgenda(
-  firstname?: string,
-  lastname?: string,
-  birthdate?: string
-): Promise<{ found: boolean; customer_id?: number; customer_name?: string }> {
-  if (!firstname && !lastname) {
-    return { found: false };
-  }
-
-  try {
-    let whereConditions: string[] = [];
-    let params: any[] = [];
-
-    if (lastname) {
-      whereConditions.push(`LOWER(JSON_UNQUOTE(JSON_EXTRACT(customer_json, '$.lastname'))) LIKE ?`);
-      params.push(`%${lastname.toLowerCase()}%`);
-    }
-    if (firstname) {
-      whereConditions.push(`LOWER(JSON_UNQUOTE(JSON_EXTRACT(customer_json, '$.firstname'))) LIKE ?`);
-      params.push(`%${firstname.toLowerCase()}%`);
-    }
-    if (birthdate) {
-      whereConditions.push(`JSON_UNQUOTE(JSON_EXTRACT(customer_json, '$.birth_date')) = ?`);
-      params.push(birthdate);
-    }
-
-    const result = await query<any>(`
-      SELECT 
-        id,
-        JSON_UNQUOTE(JSON_EXTRACT(customer_json, '$.firstname')) AS firstname,
-        JSON_UNQUOTE(JSON_EXTRACT(customer_json, '$.lastname')) AS lastname
-      FROM agenda_customers
-      WHERE ${whereConditions.join(' AND ')}
-      LIMIT 1
-    `, params);
-
-    if (result.data && result.data.length > 0) {
-      const customer = result.data[0];
-      return {
-        found: true,
-        customer_id: customer.id,
-        customer_name: `${customer.firstname} ${customer.lastname}`
-      };
-    }
-
-    return { found: false };
-  } catch (error) {
-    console.error('[InsuranceAI] Erreur recherche patient:', error);
-    return { found: false };
-  }
-}
-
-/**
  * Analyser et preparer un rapport pour l'attribution automatique
  */
 export async function analyzeAndPrepareReport(pdfBase64: string): Promise<{
   success: boolean;
-  extraction?: AIExtractionData;
+  extraction?: any;
   suggested_osteo_id?: number;
   suggested_osteo_name?: string;
-  patient_found?: boolean;
-  patient_id?: number;
   error?: string;
 }> {
   const extractionResult = await extractReportDataFromPDF(pdfBase64);
@@ -365,31 +306,7 @@ export async function analyzeAndPrepareReport(pdfBase64: string): Promise<{
       console.log(`[InsuranceAI] Osteo suggere: ${extraction.detected_osteo_name} (ID: ${osteoId})`);
     } else {
       console.log(`[InsuranceAI] Osteo detecte mais non trouve dans la DB: ${extraction.detected_osteo_name}`);
-      // On garde quand meme le nom pour l'affichage
       result.suggested_osteo_name = extraction.detected_osteo_name;
-    }
-  }
-
-  // Chercher le patient dans agenda.ch (avec gestion d'erreur)
-  if (extraction.detected_patient_name) {
-    try {
-      const nameParts = extraction.detected_patient_name.split(' ');
-      const firstname = nameParts[0];
-      const lastname = nameParts.slice(1).join(' ');
-      
-      const patientResult = await findPatientInAgenda(
-        firstname, 
-        lastname, 
-        extraction.detected_patient_birthdate || undefined
-      );
-      
-      result.patient_found = patientResult.found;
-      if (patientResult.customer_id) {
-        result.patient_id = patientResult.customer_id;
-      }
-    } catch (e) {
-      console.warn('[InsuranceAI] Erreur recherche patient (ignoree):', e);
-      result.patient_found = false;
     }
   }
 

@@ -12,7 +12,9 @@ import {
   UserCheck,
   Loader2,
   Sparkles,
-  Save
+  Save,
+  Calendar,
+  ClipboardList
 } from 'lucide-react';
 import { query } from '../services/mariadb';
 import { assignToOsteo, getOsteoList } from '../services/insuranceReportService';
@@ -84,8 +86,10 @@ export function InsuranceReportDetail({ user }: InsuranceReportDetailProps) {
         
         console.log('[ReportDetail] Mise a jour des champs...');
         console.log('  Patient:', firstName, lastName);
+        console.log('  Naissance:', extraction.detected_patient_birthdate);
         console.log('  Assurance:', extraction.detected_insurance);
         console.log('  Osteo:', extraction.detected_osteo_name);
+        console.log('  Dates traitements:', extraction.detected_treatment_dates);
         
         // Mettre a jour le rapport
         setReport((prev: any) => {
@@ -94,8 +98,10 @@ export function InsuranceReportDetail({ user }: InsuranceReportDetailProps) {
             ...prev,
             patient_firstname: firstName || prev.patient_firstname,
             patient_lastname: lastName || prev.patient_lastname,
+            patient_birthdate: extraction.detected_patient_birthdate || prev.patient_birthdate,
             insurance_name: extraction.detected_insurance || prev.insurance_name,
             reference_number: extraction.detected_reference || prev.reference_number,
+            treatment_dates: extraction.detected_treatment_dates || prev.treatment_dates,
           };
         });
         
@@ -117,6 +123,7 @@ export function InsuranceReportDetail({ user }: InsuranceReportDetailProps) {
           'Assurance: ' + (extraction.detected_insurance || 'Non detectee'),
           'Reference: ' + (extraction.detected_reference || 'Non detectee'),
           'Osteopathe: ' + (extraction.detected_osteo_name || 'Non detecte'),
+          'Dates traitements: ' + (extraction.detected_treatment_dates || 'Non detectees'),
         ].join('\n');
         
         alert(msg);
@@ -135,8 +142,18 @@ export function InsuranceReportDetail({ user }: InsuranceReportDetailProps) {
     if (!report) return;
     setSaving(true);
     try {
-      await query("UPDATE insurance_reports SET patient_firstname=?, patient_lastname=?, insurance_name=?, reference_number=? WHERE id=?",
-        [report.patient_firstname, report.patient_lastname, report.insurance_name, report.reference_number, report.id]);
+      await query(
+        "UPDATE insurance_reports SET patient_firstname=?, patient_lastname=?, patient_birthdate=?, insurance_name=?, reference_number=?, treatment_dates=? WHERE id=?",
+        [
+          report.patient_firstname, 
+          report.patient_lastname, 
+          report.patient_birthdate,
+          report.insurance_name, 
+          report.reference_number, 
+          report.treatment_dates,
+          report.id
+        ]
+      );
       
       if (selectedOsteo && selectedOsteo !== report.assigned_osteo_id) {
         await assignToOsteo(report.id, selectedOsteo as number, parseInt(user.id));
@@ -148,6 +165,21 @@ export function InsuranceReportDetail({ user }: InsuranceReportDetailProps) {
     } finally { 
       setSaving(false); 
     }
+  };
+
+  // Formater la date pour l'input date
+  const formatDateForInput = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '';
+    // Si deja au format YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    // Essayer de parser d'autres formats
+    try {
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    } catch {}
+    return dateStr;
   };
 
   if (loading) {
@@ -215,6 +247,14 @@ export function InsuranceReportDetail({ user }: InsuranceReportDetailProps) {
                 onChange={e => setReport((p: any) => ({...p, patient_lastname: e.target.value}))} 
               />
             </div>
+            <div className="info-field">
+              <label><Calendar size={14} /> Date de naissance</label>
+              <input 
+                type="date" 
+                value={formatDateForInput(report.patient_birthdate)} 
+                onChange={e => setReport((p: any) => ({...p, patient_birthdate: e.target.value}))} 
+              />
+            </div>
           </section>
           
           <section className="info-section">
@@ -233,6 +273,19 @@ export function InsuranceReportDetail({ user }: InsuranceReportDetailProps) {
                 type="text" 
                 value={report.reference_number || ''} 
                 onChange={e => setReport((p: any) => ({...p, reference_number: e.target.value}))} 
+              />
+            </div>
+          </section>
+
+          <section className="info-section">
+            <h3><ClipboardList size={18} /> Traitements</h3>
+            <div className="info-field">
+              <label>Dates des traitements concernes</label>
+              <textarea 
+                rows={3}
+                placeholder="Ex: du 15.03.2024 au 20.05.2024 ou 10.01, 15.02, 20.03.2024"
+                value={report.treatment_dates || ''} 
+                onChange={e => setReport((p: any) => ({...p, treatment_dates: e.target.value}))} 
               />
             </div>
           </section>

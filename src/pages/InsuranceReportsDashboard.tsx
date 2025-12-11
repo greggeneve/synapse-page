@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import './InsuranceReportsDashboard.css';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -514,6 +515,7 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
               <div className="col-days">Délai</div>
               <div className="col-patient">Patient</div>
               <div className="col-insurance">Assurance</div>
+              <div className="col-treatment">Dates traitement</div>
               <div className="col-osteo">Ostéopathe</div>
               <div className="col-status">Statut</div>
               <div className="col-date">Reçu le</div>
@@ -552,6 +554,13 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
                   {report.reference_number && (
                     <span className="reference">Réf: {report.reference_number}</span>
                   )}
+                </div>
+
+                {/* Dates traitement */}
+                <div className="col-treatment">
+                  <span className="treatment-dates">
+                    {report.treatment_dates || '-'}
+                  </span>
                 </div>
 
                 {/* Ostéopathe */}
