@@ -7,6 +7,8 @@
   flex-direction: column;
   height: 100%;
   background: #1e293b;
+}
+
 /* Barre d'outils */
 .annotator-toolbar {
   display: flex;
@@ -15,6 +17,9 @@
   padding: 10px 16px;
   background: #0f172a;
   border-bottom: 1px solid #334155;
+  flex-shrink: 0;
+}
+
 .tool-btn {
   display: flex;
   align-items: center;
@@ -27,28 +32,42 @@
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s;
+}
+
 .tool-btn:hover:not(:disabled) {
   background: #475569;
   border-color: #64748b;
+}
+
 .tool-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
 .tool-btn.active {
   background: #0d9488;
   border-color: #14b8a6;
   color: white;
+}
+
 .tool-btn.save-btn {
   background: #059669;
   border-color: #10b981;
   color: white;
+}
+
 .tool-btn.save-btn:hover:not(:disabled) {
   background: #047857;
+}
+
 .font-size-control {
   display: flex;
   align-items: center;
   gap: 8px;
   color: #94a3b8;
   font-size: 0.85rem;
+}
+
 .font-size-control select {
   padding: 6px 10px;
   background: #334155;
@@ -56,11 +75,15 @@
   border-radius: 4px;
   color: #e2e8f0;
   cursor: pointer;
+}
+
 .toolbar-separator {
   width: 1px;
   height: 24px;
   background: #475569;
   margin: 0 8px;
+}
+
 .annotation-count {
   margin-left: auto;
   padding: 6px 12px;
@@ -68,6 +91,8 @@
   border-radius: 20px;
   color: #94a3b8;
   font-size: 0.8rem;
+}
+
 /* Indication mode ajout */
 .adding-mode-hint {
   padding: 10px 16px;
@@ -76,28 +101,46 @@
   text-align: center;
   font-weight: 500;
   animation: pulse 1.5s infinite;
+  flex-shrink: 0;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.8; }
-/* Conteneur PDF */
+}
+
+/* =====================================================
+   Conteneur PDF - CRITICAL: position absolute pour iframe
+   ===================================================== */
 .pdf-container {
-  min-height: 0;
   flex: 1;
   position: relative;
   overflow: hidden;
-  display: flex;
+  background: #374151;
+  min-height: 0; /* Important pour flexbox */
+}
+
 .pdf-container.adding-mode {
   cursor: crosshair;
+}
+
+/* IFRAME en position absolue pour remplir 100% du conteneur */
 .pdf-iframe {
-  flex: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   border: none;
   margin: 0;
   padding: 0;
+  background: white;
+}
+
 .pdf-container.adding-mode .pdf-iframe {
   pointer-events: none;
 }
+
 /* Couche d'annotations */
 .annotations-layer {
   position: absolute;
@@ -106,14 +149,20 @@
   right: 0;
   bottom: 0;
   pointer-events: none;
+}
+
 .annotations-layer .annotation {
   pointer-events: auto;
+}
+
 /* Annotation individuelle */
 .annotation {
   position: absolute;
   transform: translate(-2px, -2px);
   min-width: 150px;
   max-width: 300px;
+}
+
 .annotation textarea {
   width: 100%;
   min-height: 30px;
@@ -126,11 +175,17 @@
   resize: both;
   outline: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 .annotation textarea:focus {
   border-color: #14b8a6;
   box-shadow: 0 2px 12px rgba(13, 148, 136, 0.3);
+}
+
 .annotation.active textarea {
   border-color: #f59e0b;
+}
+
 .delete-annotation {
   position: absolute;
   top: -8px;
@@ -147,11 +202,17 @@
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s;
+}
+
 .annotation:hover .delete-annotation {
   opacity: 1;
+}
+
 .delete-annotation:hover {
   background: #dc2626;
   transform: scale(1.1);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .annotator-toolbar {
@@ -168,8 +229,4 @@
     text-align: center;
     margin-top: 8px;
   }
-
-/* Iframe prend tout l'espace */
-.pdf-container .pdf-iframe {
-  flex: 1;
-  min-height: 0;
+}
