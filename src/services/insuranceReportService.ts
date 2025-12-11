@@ -479,7 +479,13 @@ export async function updateReportPdf(
   userId?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`[InsuranceReport] Sauvegarde PDF rapport ${reportId}, taille: ${Math.round(filledPdfBase64.length / 1024)} KB`);
+    const pdfSize = Math.round(filledPdfBase64.length / 1024);
+    console.log(`[InsuranceReport] Sauvegarde PDF rapport ${reportId}, taille: ${pdfSize} KB`);
+    
+    // Vérifier si le PDF n'est pas trop gros (limite MariaDB max_allowed_packet)
+    if (pdfSize > 10000) {
+      console.warn('[InsuranceReport] PDF très volumineux, risque de dépassement max_allowed_packet');
+    }
     
     // Mettre à jour le PDF et passer en status 'in_progress' si 'assigned'
     const result = await query(`
@@ -491,7 +497,13 @@ export async function updateReportPdf(
       WHERE id = ?
     `, [filledPdfBase64, reportId]);
     
-    console.log('[InsuranceReport] Résultat update:', result);
+    console.log('[InsuranceReport] Résultat update:', JSON.stringify(result));
+    
+    // Vérifier le résultat
+    if (!result.success) {
+      console.error('[InsuranceReport] Échec update:', result.error);
+      return { success: false, error: result.error || 'Erreur inconnue lors de la mise à jour' };
+    }
     
     // Historisation
     if (userId) {
@@ -505,7 +517,7 @@ export async function updateReportPdf(
     return { success: true };
   } catch (error: any) {
     console.error('[InsuranceReport] Erreur sauvegarde PDF:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || String(error) };
   }
 }
 
