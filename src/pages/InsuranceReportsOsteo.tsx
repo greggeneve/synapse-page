@@ -399,14 +399,6 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               {/* Colonne droite : PDF (visualisation ou édition) */}
               <div 
                 className="modal-pdf"
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  background: '#374151',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
               >
                 {selectedReport.original_pdf ? (
                   isEditing ? (
