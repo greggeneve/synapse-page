@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -228,8 +227,8 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
         )}
       </div>
 
-      {/* Modal de prévisualisation - Plein écran (Portal dans body) */}
-      {selectedReport && createPortal(
+      {/* Modal de prévisualisation - Fenêtre redimensionnable */}
+      {selectedReport && (
         <div 
           className="report-modal"
           style={{
@@ -238,24 +237,32 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
             left: 0,
             right: 0,
             bottom: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(15, 23, 42, 0.95)',
+            background: 'rgba(0,0,0,0.7)',
             zIndex: 9999,
             display: 'flex',
-            margin: 0,
-            padding: 0
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
           }}
+          onClick={() => setSelectedReport(null)}
         >
           <div 
             className="modal-content" 
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%',
-              height: '100%',
+              width: '90vw',
+              height: '90vh',
+              minWidth: '600px',
+              minHeight: '400px',
+              maxWidth: '100vw',
+              maxHeight: '100vh',
+              background: 'white',
+              borderRadius: '12px',
               display: 'flex',
               flexDirection: 'column',
-              background: 'white'
+              overflow: 'hidden',
+              resize: 'both',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
             }}
           >
             <div className="modal-header">
@@ -286,14 +293,13 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               <div 
                 className="modal-left-panel"
                 style={{
-                  width: '350px',
-                  minWidth: '350px',
-                  maxWidth: '350px',
+                  width: '320px',
+                  minWidth: '320px',
                   display: 'flex',
                   flexDirection: 'column',
                   borderRight: '1px solid #e2e8f0',
                   overflowY: 'auto',
-                  background: 'white'
+                  background: '#f8fafc'
                 }}
               >
                 {/* Info du rapport */}
@@ -369,33 +375,38 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               </div>
 
               {/* Colonne droite : PDF plein écran */}
+              {/* PDF avec zoom contrôlable */}
               <div 
                 className="modal-pdf"
                 style={{
                   flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: '#374151',
                   position: 'relative',
-                  background: '#4b5563',
-                  minWidth: 0,
                   overflow: 'hidden'
                 }}
               >
                 {selectedReport.original_pdf ? (
-                  <object
-                    data={`data:application/pdf;base64,${selectedReport.original_pdf}#toolbar=1&view=FitH&zoom=page-width`}
-                    type="application/pdf"
+                  <iframe
+                    src={`data:application/pdf;base64,${selectedReport.original_pdf}`}
+                    title="Aperçu du rapport"
                     style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
                       width: '100%',
                       height: '100%',
-                      border: 'none'
+                      border: 'none',
+                      flex: 1
                     }}
-                  >
-                    <p>Impossible d'afficher le PDF. <a href={`data:application/pdf;base64,${selectedReport.original_pdf}`} download="rapport.pdf">Télécharger</a></p>
-                  </object>
+                  />
                 ) : (
-                  <div className="no-preview">
+                  <div className="no-preview" style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#9ca3af'
+                  }}>
                     <FileText size={48} />
                     <p>Aperçu non disponible</p>
                   </div>
@@ -420,8 +431,7 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               )}
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
