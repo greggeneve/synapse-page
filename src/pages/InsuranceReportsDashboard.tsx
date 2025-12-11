@@ -95,6 +95,12 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
   }[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // États pour le modal d'attribution
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [reportToAssign, setReportToAssign] = useState<ReportWithDays | null>(null);
+  const [selectedOsteoId, setSelectedOsteoId] = useState<number | ''>('');
+  const [assigning, setAssigning] = useState(false);
+
   // Charger tous les rapports avec calcul des jours
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -244,6 +250,36 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
       alert(`Erreur d'analyse: ${error.message}`);
     } finally {
       setAnalyzingId(null);
+    }
+  };
+
+
+  // Ouvrir le modal d'attribution
+  const openAssignModal = (report: ReportWithDays) => {
+    setReportToAssign(report);
+    setSelectedOsteoId(report.assigned_osteo_id || '');
+    setShowAssignModal(true);
+  };
+
+  // Confirmer l'attribution
+  const confirmAssignment = async () => {
+    if (!reportToAssign || !selectedOsteoId) return;
+    setAssigning(true);
+    try {
+      const result = await assignToOsteo(reportToAssign.id, selectedOsteoId as number, parseInt(user.id));
+      if (result.success) {
+        const osteoName = osteoList.find(o => o.id === selectedOsteoId)?.name || 'l'"'"'ostéopathe';
+        alert('✅ Rapport attribué à ' + osteoName + '\n\nIl recevra une notification.');
+        setShowAssignModal(false);
+        setReportToAssign(null);
+        loadReports();
+      } else {
+        alert('Erreur: ' + (result.error || 'Erreur inconnue'));
+      }
+    } catch (error: any) {
+      alert('Erreur: ' + error.message);
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -594,6 +630,16 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
                     <Eye size={16} />
                   </button>
                   <button 
+                    className={`btn-assign ${report.assigned_osteo_id ? 'assigned' : 'not-assigned'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openAssignModal(report);
+                    }}
+                    title={report.assigned_osteo_id ? "Modifier l'attribution" : "Attribuer"}
+                  >
+                    <Send size={16} />
+                  </button>
+                  <button 
                     className={`btn-reanalyze ${analyzingId === report.id ? 'analyzing' : ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -729,6 +775,54 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Attribution */}
+      {showAssignModal && reportToAssign && (
+        <div className="assign-modal" onClick={() => setShowAssignModal(false)}>
+          <div className="modal-content assign-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <Send size={24} />
+              <h2>Attribuer le rapport</h2>
+              <button className="btn-close" onClick={() => setShowAssignModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="report-summary">
+                <div className="summary-row">
+                  <User size={16} />
+                  <strong>Patient:</strong>
+                  <span>{reportToAssign.patient_firstname} {reportToAssign.patient_lastname}</span>
+                </div>
+                <div className="summary-row">
+                  <Building2 size={16} />
+                  <strong>Assurance:</strong>
+                  <span>{reportToAssign.insurance_name || 'Non identifiée'}</span>
+                </div>
+              </div>
+              <div className="assign-selection">
+                <label>Attribuer à :</label>
+                <select value={selectedOsteoId} onChange={e => setSelectedOsteoId(e.target.value ? parseInt(e.target.value) : '')} className="osteo-dropdown">
+                  <option value="">-- Sélectionner --</option>
+                  {osteoList.map(osteo => (
+                    <option key={osteo.id} value={osteo.id}>{osteo.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="assign-info">
+                <Bell size={16} />
+                <span>L'ostéopathe recevra une notification.</span>
+              </div>
+              <div className="assign-actions">
+                <button className="btn-cancel" onClick={() => setShowAssignModal(false)}>Annuler</button>
+                <button className="btn-confirm" onClick={confirmAssignment} disabled={!selectedOsteoId || assigning}>
+                  {assigning ? <><Loader2 size={18} className="spin" />Attribution...</> : <><Send size={18} />Confirmer</>}
+                </button>
+              </div>
             </div>
           </div>
         </div>
