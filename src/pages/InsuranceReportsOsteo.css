@@ -687,3 +687,10 @@
   }
 }
 
+
+/* PdfAnnotator dans le modal */
+.modal-pdf .pdf-annotator {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+}

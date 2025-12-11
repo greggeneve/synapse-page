@@ -112,6 +112,7 @@
 
 /* Conteneur PDF */
 .pdf-container {
+  min-height: 0;
   flex: 1;
   position: relative;
   overflow: hidden;
@@ -224,3 +225,9 @@
   }
 }
 
+
+/* Iframe prend tout l'espace */
+.pdf-container .pdf-iframe {
+  flex: 1;
+  min-height: 0;
+}
