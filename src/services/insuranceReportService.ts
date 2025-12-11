@@ -605,13 +605,13 @@ function parseReport(row: any): InsuranceReport {
           : row.ai_extraction_data)
       : undefined,
     original_pdf: row.original_pdf 
-      ? (Buffer.isBuffer(row.original_pdf) 
-          ? row.original_pdf.toString('base64') 
+      ? (typeof row.original_pdf === "object" 
+          ? btoa(String.fromCharCode(...new Uint8Array(row.original_pdf))) 
           : row.original_pdf)
       : undefined,
     filled_pdf: row.filled_pdf
-      ? (Buffer.isBuffer(row.filled_pdf)
-          ? row.filled_pdf.toString('base64')
+      ? (typeof row.filled_pdf === "object"
+          ? btoa(String.fromCharCode(...new Uint8Array(row.filled_pdf)))
           : row.filled_pdf)
       : undefined
   };
