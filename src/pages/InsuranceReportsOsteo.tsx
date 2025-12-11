@@ -227,9 +227,9 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
         )}
       </div>
 
-      {/* Modal de prévisualisation */}
+      {/* Modal de prévisualisation - Plein écran avec 2 colonnes */}
       {selectedReport && (
-        <div className="report-modal" onClick={() => setSelectedReport(null)}>
+        <div className="report-modal">
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title">
@@ -245,60 +245,96 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               <button className="btn-close" onClick={() => setSelectedReport(null)}>×</button>
             </div>
 
-            {/* Info du rapport */}
-            <div className="modal-info">
-              <div className="info-grid">
-                <div className="info-item">
-                  <Building2 size={16} />
-                  <span>Assurance</span>
-                  <strong>{selectedReport.insurance_name || 'Non spécifié'}</strong>
+            {/* Layout 2 colonnes */}
+            <div className="modal-body-split">
+              {/* Colonne gauche : Infos + Séances du patient */}
+              <div className="modal-left-panel">
+                {/* Info du rapport */}
+                <div className="modal-info">
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <Building2 size={16} />
+                      <span>Assurance</span>
+                      <strong>{selectedReport.insurance_name || 'Non spécifié'}</strong>
+                    </div>
+                    <div className="info-item">
+                      <User size={16} />
+                      <span>Patient</span>
+                      <strong>
+                        {selectedReport.patient_firstname} {selectedReport.patient_lastname}
+                      </strong>
+                    </div>
+                    <div className="info-item">
+                      <Calendar size={16} />
+                      <span>Date limite</span>
+                      <strong className={getUrgencyClass(selectedReport.due_date)}>
+                        {formatDate(selectedReport.due_date)}
+                      </strong>
+                    </div>
+                    <div className="info-item">
+                      <FileText size={16} />
+                      <span>Référence</span>
+                      <strong>{selectedReport.reference_number || '-'}</strong>
+                    </div>
+                  </div>
+
+                  {/* Commentaire de review si existe */}
+                  {selectedReport.review_comment && (
+                    <div className="review-comment">
+                      <AlertCircle size={16} />
+                      <div>
+                        <strong>Commentaire de la direction :</strong>
+                        <p>{selectedReport.review_comment}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="info-item">
-                  <User size={16} />
-                  <span>Patient</span>
-                  <strong>
-                    {selectedReport.patient_firstname} {selectedReport.patient_lastname}
-                  </strong>
-                </div>
-                <div className="info-item">
-                  <Calendar size={16} />
-                  <span>Date limite</span>
-                  <strong className={getUrgencyClass(selectedReport.due_date)}>
-                    {formatDate(selectedReport.due_date)}
-                  </strong>
-                </div>
-                <div className="info-item">
-                  <FileText size={16} />
-                  <span>Référence</span>
-                  <strong>{selectedReport.reference_number || '-'}</strong>
+
+                {/* Séances du patient */}
+                <div className="patient-sessions">
+                  <h3>
+                    <Clock size={18} />
+                    Séances concernées
+                  </h3>
+                  
+                  {/* Placeholder - sera rempli automatiquement plus tard */}
+                  <div className="sessions-placeholder">
+                    <Calendar size={40} />
+                    <p>Les séances du patient seront affichées ici automatiquement</p>
+                    <small>Dates de traitement : {selectedReport.treatment_dates || 'Non renseignées'}</small>
+                  </div>
+
+                  {/* Exemple de ce que ça donnera une fois intégré */}
+                  {/*
+                  <div className="sessions-list">
+                    <div className="session-item">
+                      <div className="session-date">
+                        <Calendar size={14} />
+                        12 décembre 2025
+                      </div>
+                      <div className="session-details">
+                        Consultation ostéopathie - 45min
+                      </div>
+                    </div>
+                  </div>
+                  */}
                 </div>
               </div>
 
-              {/* Commentaire de review si existe */}
-              {selectedReport.review_comment && (
-                <div className="review-comment">
-                  <AlertCircle size={16} />
-                  <div>
-                    <strong>Commentaire de la direction :</strong>
-                    <p>{selectedReport.review_comment}</p>
+              {/* Colonne droite : PDF */}
+              <div className="modal-pdf">
+                {selectedReport.original_pdf ? (
+                  <iframe
+                    src={`data:application/pdf;base64,${selectedReport.original_pdf}`}
+                    title="Aperçu du rapport"
+                  />
+                ) : (
+                  <div className="no-preview">
+                    <FileText size={48} />
+                    <p>Aperçu non disponible</p>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Prévisualisation PDF */}
-            <div className="modal-pdf">
-              {selectedReport.original_pdf ? (
-                <iframe
-                  src={`data:application/pdf;base64,${selectedReport.original_pdf}`}
-                  title="Aperçu du rapport"
-                />
-              ) : (
-                <div className="no-preview">
-                  <FileText size={48} />
-                  <p>Aperçu non disponible</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Actions */}
