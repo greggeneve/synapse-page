@@ -319,28 +319,23 @@
 /* Modal - Full screen avec 2 colonnes */
 .report-modal {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(15, 23, 42, 0.95);
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
   z-index: 1000;
-  padding: 0;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .report-modal .modal-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: white;
-  width: 100%;
-  height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .modal-header {
@@ -350,6 +345,7 @@
   padding: 12px 24px;
   background: linear-gradient(135deg, #0d9488, #0f766e);
   color: white;
+  height: 60px;
   flex-shrink: 0;
 }
 
@@ -390,21 +386,24 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Layout 2 colonnes : Séances à gauche, PDF à droite */
+/* Layout 2 colonnes : Infos à gauche, PDF à droite */
 .modal-body-split {
-  display: grid;
-  grid-template-columns: 400px 1fr;
+  display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
-/* Colonne gauche : Séances du patient */
+/* Colonne gauche : Infos du patient */
 .modal-left-panel {
+  width: 380px;
+  min-width: 380px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e2e8f0;
-  overflow: hidden;
+  overflow-y: auto;
+  background: #f8fafc;
 }
 
 .modal-info {
@@ -564,51 +563,37 @@
   line-height: 1.5;
 }
 
-/* Colonne droite : PDF plein écran */
+/* Colonne droite : PDF pleine largeur */
 .modal-pdf {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  background: #374151;
-  overflow: hidden;
+  background: #475569;
   position: relative;
 }
 
 .modal-pdf iframe {
-  flex: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   border: none;
-  min-height: 0;
   background: white;
-}
-
-/* Conteneur pour centrer le PDF au format A4 */
-.pdf-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  overflow: auto;
-  background: #374151;
-}
-
-.pdf-container iframe {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  border: none;
-  background: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .modal-pdf .no-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1;
   color: #94a3b8;
+  background: #1e293b;
 }
 
 .modal-pdf .no-preview svg {
@@ -620,9 +605,10 @@
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding: 16px 24px;
-  background: #f8fafc;
+  padding: 12px 24px;
   border-top: 1px solid #e2e8f0;
+  background: white;
+  height: 60px;
   flex-shrink: 0;
 }
 
