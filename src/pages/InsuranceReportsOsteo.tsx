@@ -54,6 +54,7 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<InsuranceReport | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [loadedAnnotations, setLoadedAnnotations] = useState<any[]>([]);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -98,6 +99,20 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
     try {
       // Sauvegarder le PDF annoté avec userId pour l'historique
       const result = await updateReportPdf(selectedReport.id, annotatedPdfBase64, parseInt(user.id));
+      
+      // Sauvegarder aussi les annotations pour pouvoir les recharger
+      if (annotations.length > 0) {
+        const annotationsToSave = annotations.map(ann => ({
+          report_id: selectedReport.id,
+          page_number: ann.page || 1,
+          annotation_type: 'text' as const,
+          x_position: ann.x,
+          y_position: ann.y,
+          content: ann.text,
+          font_size: ann.fontSize || 12,
+        }));
+        await saveAnnotations(selectedReport.id, annotationsToSave, parseInt(user.id));
+      }
       
       if (result.success) {
         // Mettre à jour le rapport local
@@ -412,7 +427,7 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
                     <PdfAnnotator
                       pdfBase64={selectedReport.filled_pdf || selectedReport.original_pdf}
                       onSave={handleSaveAnnotatedPdf}
-                      existingAnnotations={[]}
+                      existingAnnotations={loadedAnnotations}
                     />
                   ) : (
                     <iframe
