@@ -247,7 +247,7 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
           onClick={() => setSelectedReport(null)}
         >
           <div 
-            className="modal-content" 
+            className="insurance-modal" 
             onClick={e => e.stopPropagation()}
             style={{
               width: '95vw',
