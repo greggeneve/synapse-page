@@ -319,23 +319,28 @@
 /* Modal - Full screen avec 2 colonnes */
 .report-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(15, 23, 42, 0.95);
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
   z-index: 1000;
+  padding: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .report-modal .modal-content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   background: white;
+  width: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
@@ -345,7 +350,6 @@
   padding: 12px 24px;
   background: linear-gradient(135deg, #0d9488, #0f766e);
   color: white;
-  height: 60px;
   flex-shrink: 0;
 }
 
@@ -386,24 +390,21 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Layout 2 colonnes : Infos à gauche, PDF à droite */
+/* Layout 2 colonnes : Séances à gauche, PDF à droite */
 .modal-body-split {
-  display: flex;
+  display: grid;
+  grid-template-columns: 400px 1fr;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
-/* Colonne gauche : Infos du patient */
+/* Colonne gauche : Séances du patient */
 .modal-left-panel {
-  width: 380px;
-  min-width: 380px;
-  max-width: 380px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e2e8f0;
-  overflow-y: auto;
-  background: #f8fafc;
+  overflow: hidden;
 }
 
 .modal-info {
@@ -563,19 +564,20 @@
   line-height: 1.5;
 }
 
-/* Colonne droite : PDF pleine largeur */
+/* Colonne droite : PDF plein écran */
+/* Colonne droite : PDF plein écran */
 .modal-pdf {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: #475569;
   position: relative;
+  background: #1e293b;
 }
 
 .modal-pdf iframe {
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   height: 100%;
   border: none;
@@ -593,7 +595,6 @@
   align-items: center;
   justify-content: center;
   color: #94a3b8;
-  background: #1e293b;
 }
 
 .modal-pdf .no-preview svg {
@@ -605,10 +606,9 @@
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding: 12px 24px;
+  padding: 16px 24px;
+  background: #f8fafc;
   border-top: 1px solid #e2e8f0;
-  background: white;
-  height: 60px;
   flex-shrink: 0;
 }
 
