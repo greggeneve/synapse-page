@@ -250,19 +250,15 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
             className="modal-content" 
             onClick={e => e.stopPropagation()}
             style={{
-              width: '90vw',
-              height: '90vh',
+              width: '100vw',
+              height: '100vh',
               minWidth: '600px',
               minHeight: '400px',
-              maxWidth: '100vw',
-              maxHeight: '100vh',
               background: 'white',
-              borderRadius: '12px',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              resize: 'both',
-              boxShadow: '0 25px 50px rgba(0,0,0,0.3)'
+              resize: 'both'
             }}
           >
             <div className="modal-header">
@@ -293,7 +289,8 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
               <div 
                 className="modal-left-panel"
                 style={{
-                  flex: 1,
+                  width: '600px',
+                  minWidth: '600px',
                   display: 'flex',
                   flexDirection: 'column',
                   borderRight: '1px solid #e2e8f0',
