@@ -314,6 +314,12 @@ export async function assignToOsteo(
   assignedBy: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const reportResult = await query<any>(
+      `SELECT patient_firstname, patient_lastname, insurance_name FROM insurance_reports WHERE id = ?`,
+      [reportId]
+    );
+    const report = reportResult.data?.[0];
+
     await query(`
       UPDATE insurance_reports 
       SET assigned_osteo_id = ?, status = 'assigned'
@@ -321,11 +327,19 @@ export async function assignToOsteo(
     `, [osteoId, reportId]);
 
     await addHistoryEntry(reportId, 'assigned', assignedBy);
+    
+    if (report) {
+      const patientName = `${report.patient_firstname || ''} ${report.patient_lastname || ''}`.trim() || 'Patient';
+      const { notifyReportAssigned } = await import('./notificationService');
+      await notifyReportAssigned(osteoId, patientName, report.insurance_name || 'Assurance', reportId);
+    }
+
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
+
 
 /**
  * Marquer un rapport comme "en cours" (ostéo commence à le remplir)

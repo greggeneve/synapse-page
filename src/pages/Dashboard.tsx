@@ -42,6 +42,7 @@ import { isOsteopath } from '../services/rmeEmployeeService';
 import { getAvailableUsers, loginAsUser } from '../services/authService';
 import { getEmployeeEmailCredentials, getUnreadCount, type EmailCredentials } from '../services/mailService';
 import { MailClient } from '../components/MailClient';
+import { NotificationBell } from '../components/NotificationBell';
 import type { TeamMember } from '../types';
 
 interface DashboardProps {
@@ -246,10 +247,7 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
             {unreadMailCount > 0 && (
               <span className="notification-badge mail-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
             )}
-          </button>
-          <button className="btn-icon-header" title="Notifications">
-            <Bell size={20} />
-            <span className="notification-badge">2</span>
+          <NotificationBell userId={parseInt(user.id)} />
           </button>
           <button 
             className="btn-icon-header logout" 

@@ -311,6 +311,21 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
     critical: reports.filter(r => r.days_since_received > 15).length,
     needsCorrection: reports.filter(r => r.status === 'needs_correction').length
   };
+  };
+
+  // Stats par ostéopathe
+  const osteoStats = osteoList.map(osteo => {
+    const osteoReports = reports.filter(r => r.assigned_osteo_id === osteo.id);
+    return {
+      id: osteo.id,
+      name: osteo.name,
+      total: osteoReports.length,
+      assigned: osteoReports.filter(r => r.status === 'assigned').length,
+      inProgress: osteoReports.filter(r => r.status === 'in_progress').length,
+      needsCorrection: osteoReports.filter(r => r.status === 'needs_correction').length,
+      overdue: osteoReports.filter(r => r.days_since_received > 10).length
+    };
+  }).filter(o => o.total > 0).sort((a, b) => b.total - a.total);
 
   // Upload de fichiers
   const handleFileSelect = async (files: FileList | File[]) => {
@@ -502,6 +517,32 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
         )}
       </div>
 
+
+      {/* Vue par ostéopathe */}
+      {osteoStats.length > 0 && (
+        <div className="osteo-overview">
+          <h3>📋 Rapports par ostéopathe</h3>
+          <div className="osteo-cards">
+            {osteoStats.map(osteo => (
+              <div 
+                key={osteo.id} 
+                className={`osteo-card ${osteo.overdue > 0 ? 'has-overdue' : ''}`}
+                onClick={() => setOsteoFilter(osteo.id)}
+              >
+                <div className="osteo-name">{osteo.name}</div>
+                <div className="osteo-badges">
+                  <span className="badge total">{osteo.total}</span>
+                  {osteo.assigned > 0 && <span className="badge assigned">📝 {osteo.assigned}</span>}
+                  {osteo.inProgress > 0 && <span className="badge progress">✏️ {osteo.inProgress}</span>}
+                  {osteo.needsCorrection > 0 && <span className="badge correction">⚠️ {osteo.needsCorrection}</span>}
+                </div>
+                {osteo.overdue > 0 && <div className="overdue-alert">🔴 {osteo.overdue} en retard</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filtres */}
       <div className="filters-bar">
         <div className="filter-group">
@@ -561,7 +602,7 @@ export function InsuranceReportsDashboard({ user }: InsuranceReportsDashboardPro
             {filteredReports.map(report => (
               <div 
                 key={report.id} 
-                className={`table-row ${report.urgency_level}`}
+                className={`table-row ${report.urgency_level} ${report.status === 'pending_assignment' ? 'pending-assignment' : ''} ${report.assigned_osteo_id ? 'assigned-to-osteo' : ''}`}
               >
                 {/* Pastille délai */}
                 <div className="col-days">

@@ -1435,3 +1435,108 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Vue par ostéopathe */
+.osteo-overview {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.osteo-overview h3 {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.osteo-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.osteo-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  min-width: 150px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.osteo-card:hover {
+  background: #f1f5f9;
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+}
+
+.osteo-card.has-overdue {
+  border-left: 3px solid #ef4444;
+}
+
+.osteo-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.osteo-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.osteo-badges .badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.osteo-badges .badge.total {
+  background: #3b82f6;
+  color: white;
+}
+
+.osteo-badges .badge.assigned {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.osteo-badges .badge.progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.osteo-badges .badge.correction {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.overdue-alert {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* Ligne de rapport assigné (grisé) */
+.table-row.assigned-to-osteo {
+  background: #f8fafc;
+  opacity: 0.7;
+}
+
+.table-row.assigned-to-osteo:hover {
+  opacity: 1;
+}
+
+/* Ligne à traiter par admin (en évidence) */
+.table-row.pending-assignment {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+}
