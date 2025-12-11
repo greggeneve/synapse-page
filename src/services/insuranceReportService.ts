@@ -471,16 +471,42 @@ export async function archiveReport(reportId: number, archivedBy: number): Promi
 }
 
 /**
- * Mettre à jour le PDF rempli d'un rapport
+ * Mettre à jour le PDF rempli d'un rapport avec historisation
  */
-export async function updateReportPdf(reportId: number, filledPdfBase64: string): Promise<{ success: boolean }> {
-  await query(`
-    UPDATE insurance_reports 
-    SET filled_pdf = ?, 
-        updated_at = NOW()
-    WHERE id = ?
-  `, [filledPdfBase64, reportId]);
-  return { success: true };
+export async function updateReportPdf(
+  reportId: number, 
+  filledPdfBase64: string,
+  userId?: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log(`[InsuranceReport] Sauvegarde PDF rapport ${reportId}, taille: ${Math.round(filledPdfBase64.length / 1024)} KB`);
+    
+    // Mettre à jour le PDF et passer en status 'in_progress' si 'assigned'
+    const result = await query(`
+      UPDATE insurance_reports 
+      SET filled_pdf = ?, 
+          filled_filename = CONCAT('rapport_annote_', id, '.pdf'),
+          status = CASE WHEN status = 'assigned' THEN 'in_progress' ELSE status END,
+          updated_at = NOW()
+      WHERE id = ?
+    `, [filledPdfBase64, reportId]);
+    
+    console.log('[InsuranceReport] Résultat update:', result);
+    
+    // Historisation
+    if (userId) {
+      try {
+        await addHistoryEntry(reportId, 'saved_draft', userId, 'PDF annoté sauvegardé');
+      } catch (histError) {
+        console.warn('[InsuranceReport] Historique non enregistré:', histError);
+      }
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('[InsuranceReport] Erreur sauvegarde PDF:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 // ===== ANNOTATIONS =====

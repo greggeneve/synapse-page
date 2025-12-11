@@ -96,19 +96,26 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
     if (!selectedReport) return;
     
     try {
-      // Sauvegarder le PDF annoté
-      await updateReportPdf(selectedReport.id, annotatedPdfBase64);
+      // Sauvegarder le PDF annoté avec userId pour l'historique
+      const result = await updateReportPdf(selectedReport.id, annotatedPdfBase64, parseInt(user.id));
       
-      // Mettre à jour le rapport local
-      setSelectedReport({
-        ...selectedReport,
-        filled_pdf: annotatedPdfBase64
-      });
-      
-      // Recharger les rapports
-      loadReports();
-    } catch (error) {
+      if (result.success) {
+        // Mettre à jour le rapport local
+        setSelectedReport({
+          ...selectedReport,
+          filled_pdf: annotatedPdfBase64,
+          status: selectedReport.status === 'assigned' ? 'in_progress' : selectedReport.status
+        });
+        
+        // Recharger les rapports
+        loadReports();
+      } else {
+        console.error('Erreur sauvegarde:', result.error);
+        alert(\`Erreur lors de la sauvegarde: \${result.error}\`);
+      }
+    } catch (error: any) {
       console.error('Erreur sauvegarde PDF:', error);
+      alert(\`Erreur: \${error.message}\`);
     }
   };
 
