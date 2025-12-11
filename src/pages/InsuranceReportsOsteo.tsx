@@ -321,13 +321,15 @@ export function InsuranceReportsOsteo({ user }: InsuranceReportsOsteoProps) {
                 </div>
               </div>
 
-              {/* Colonne droite : PDF */}
+              {/* Colonne droite : PDF plein écran */}
               <div className="modal-pdf">
                 {selectedReport.original_pdf ? (
-                  <iframe
-                    src={`data:application/pdf;base64,${selectedReport.original_pdf}`}
-                    title="Aperçu du rapport"
-                  />
+                  <div className="pdf-container">
+                    <iframe
+                      src={`data:application/pdf;base64,${selectedReport.original_pdf}#view=FitH`}
+                      title="Aperçu du rapport"
+                    />
+                  </div>
                 ) : (
                   <div className="no-preview">
                     <FileText size={48} />
