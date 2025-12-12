@@ -2,14 +2,14 @@ import { query } from './mariadb';
 import type { TeamMember } from '../types';
 
 // Récupérer les membres de l'équipe actifs depuis la DB
+// Utilise v_active_employees (règle: date_sortie NULL ou future)
 export async function getActiveTeamMembers(): Promise<TeamMember[]> {
   const result = await query<any>(`
     SELECT 
       employee_id,
       profile_json
-    FROM employees 
-    WHERE JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
-    ORDER BY JSON_EXTRACT(profile_json, '$.identification.nom')
+    FROM v_active_employees
+    ORDER BY nom
   `);
 
   if (!result.success || !result.data) {

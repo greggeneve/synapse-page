@@ -262,10 +262,9 @@ async function getOsteoList(): Promise<OsteoInfo[]> {
   const result = await query<any>(`
     SELECT 
       employee_id as id,
-      JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.identification.prenom')) AS firstname,
-      JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.identification.nom')) AS lastname
-    FROM employees
-    WHERE JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
+      prenom AS firstname,
+      nom AS lastname
+    FROM v_active_employees
   `);
 
   console.log('[InsuranceAI] Employes actifs trouves:', result.data?.length || 0);

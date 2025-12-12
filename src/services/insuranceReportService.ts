@@ -31,6 +31,7 @@ export interface InsuranceReport {
   patient_lastname?: string;
   patient_birthdate?: string;
   patient_avs?: string;
+  treatment_dates?: string;
   
   // Fichiers
   original_pdf?: string;      // Base64
@@ -104,6 +105,18 @@ export interface ReportHistoryEntry {
   performer_name?: string;
   comment?: string;
   created_at: string;
+}
+
+export interface PdfVersion {
+  id: number;
+  report_id: number;
+  version_number: number;
+  version_label?: string;
+  created_by?: number;
+  created_by_name?: string;
+  created_at: string;
+  is_selected: boolean;
+  pdf_data?: string;  // Base64, optionnel (pas chargé par défaut)
 }
 
 // ===== CRÉATION & UPLOAD =====
@@ -471,33 +484,79 @@ export async function archiveReport(reportId: number, archivedBy: number): Promi
 }
 
 /**
- * Mettre à jour le PDF rempli d'un rapport avec historisation
+ * Mettre à jour le PDF rempli d'un rapport avec historisation ET versioning
  */
 export async function updateReportPdf(
   reportId: number, 
   filledPdfBase64: string,
-  userId?: number
-): Promise<{ success: boolean; error?: string }> {
+  userId?: number,
+  versionLabel?: string
+): Promise<{ success: boolean; error?: string; versionId?: number; versionNumber?: number }> {
   try {
     const pdfSize = Math.round(filledPdfBase64.length / 1024);
-    console.log(`[InsuranceReport] Sauvegarde PDF rapport ${reportId}, taille: ${pdfSize} KB`);
+    console.log(`[InsuranceReport] Sauvegarde PDF rapport ${reportId}, taille: ${pdfSize} KB, userId: ${userId}`);
     
     // Vérifier si le PDF n'est pas trop gros (limite MariaDB max_allowed_packet)
     if (pdfSize > 10000) {
       console.warn('[InsuranceReport] PDF très volumineux, risque de dépassement max_allowed_packet');
     }
     
-    // Mettre à jour le PDF et passer en status 'in_progress' si 'assigned'
+    let nextVersion = 1;
+    let versionCreated = false;
+    
+    // Essayer de créer une version (si la table existe)
+    try {
+      // Récupérer le prochain numéro de version
+      const versionResult = await query<any>(`
+        SELECT COALESCE(MAX(version_number), 0) + 1 AS next_version 
+        FROM insurance_report_pdf_versions 
+        WHERE report_id = ?
+      `, [reportId]);
+      
+      console.log('[InsuranceReport] Version result:', JSON.stringify(versionResult));
+      
+      if (versionResult.success) {
+        nextVersion = versionResult.data?.[0]?.next_version || 1;
+        
+        // Désélectionner toutes les versions existantes
+        await query(`
+          UPDATE insurance_report_pdf_versions 
+          SET is_selected = FALSE 
+          WHERE report_id = ?
+        `, [reportId]);
+        
+        // Créer la nouvelle version
+        console.log(`[InsuranceReport] Création version ${nextVersion} pour rapport ${reportId}`);
+        const insertResult = await query<any>(`
+          INSERT INTO insurance_report_pdf_versions 
+          (report_id, pdf_data, version_number, version_label, created_by, is_selected)
+          VALUES (?, ?, ?, ?, ?, TRUE)
+        `, [reportId, filledPdfBase64, nextVersion, versionLabel || `Version ${nextVersion}`, userId]);
+        
+        console.log('[InsuranceReport] Insert version result:', JSON.stringify(insertResult));
+        
+        if (insertResult.success) {
+          versionCreated = true;
+        } else {
+          console.error('[InsuranceReport] Échec insertion version:', insertResult.error);
+        }
+      }
+    } catch (versionError: any) {
+      // Table n'existe probablement pas
+      console.warn('[InsuranceReport] Table versions non disponible:', versionError.message);
+    }
+    
+    // Mettre à jour le PDF principal et passer en status 'in_progress' si 'assigned'
     const result = await query(`
       UPDATE insurance_reports 
       SET filled_pdf = ?, 
-          filled_filename = CONCAT('rapport_annote_', id, '.pdf'),
+          filled_filename = CONCAT('rapport_annote_', id, '_v', ?, '.pdf'),
           status = CASE WHEN status = 'assigned' THEN 'in_progress' ELSE status END,
           updated_at = NOW()
       WHERE id = ?
-    `, [filledPdfBase64, reportId]);
+    `, [filledPdfBase64, nextVersion, reportId]);
     
-    console.log('[InsuranceReport] Résultat update:', JSON.stringify(result));
+    console.log('[InsuranceReport] Résultat update rapport:', JSON.stringify(result));
     
     // Vérifier le résultat
     if (!result.success) {
@@ -508,16 +567,201 @@ export async function updateReportPdf(
     // Historisation
     if (userId) {
       try {
-        await addHistoryEntry(reportId, 'saved_draft', userId, 'PDF annoté sauvegardé');
+        await addHistoryEntry(reportId, 'saved_draft', userId, `Version ${nextVersion} sauvegardée`);
       } catch (histError) {
         console.warn('[InsuranceReport] Historique non enregistré:', histError);
       }
     }
     
-    return { success: true };
+    return { 
+      success: true, 
+      versionNumber: nextVersion
+    };
   } catch (error: any) {
     console.error('[InsuranceReport] Erreur sauvegarde PDF:', error);
     return { success: false, error: error.message || String(error) };
+  }
+}
+
+// ===== GESTION DES VERSIONS =====
+
+/**
+ * Récupérer la liste des versions d'un rapport (sans les données PDF)
+ */
+export async function getPdfVersions(reportId: number): Promise<PdfVersion[]> {
+  console.log(`[InsuranceReport] Chargement versions pour rapport ${reportId}`);
+  try {
+    const result = await query<any>(`
+      SELECT 
+        v.id, v.report_id, v.version_number, v.version_label,
+        v.created_by, v.created_at, v.is_selected,
+        CONCAT(
+          JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.prenom')), ' ',
+          JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.nom'))
+        ) AS created_by_name
+      FROM insurance_report_pdf_versions v
+      LEFT JOIN employees e ON v.created_by = e.employee_id
+      WHERE v.report_id = ?
+      ORDER BY v.version_number DESC
+    `, [reportId]);
+    
+    console.log('[InsuranceReport] Résultat versions:', JSON.stringify(result));
+    
+    if (!result.success) {
+      console.error('[InsuranceReport] Erreur SQL versions:', result.error);
+      return [];
+    }
+    
+    return result.data || [];
+  } catch (error) {
+    console.error('[InsuranceReport] Exception récupération versions:', error);
+    return [];
+  }
+}
+
+/**
+ * Récupérer une version spécifique avec ses données PDF
+ */
+export async function getPdfVersion(versionId: number): Promise<PdfVersion | null> {
+  try {
+    const result = await query<any>(`
+      SELECT 
+        v.*,
+        CONCAT(
+          JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.prenom')), ' ',
+          JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.nom'))
+        ) AS created_by_name
+      FROM insurance_report_pdf_versions v
+      LEFT JOIN employees e ON v.created_by = e.employee_id
+      WHERE v.id = ?
+    `, [versionId]);
+    
+    if (!result.data || result.data.length === 0) return null;
+    
+    const row = result.data[0];
+    return {
+      ...row,
+      pdf_data: row.pdf_data 
+        ? (typeof row.pdf_data === "object" 
+            ? btoa(String.fromCharCode(...new Uint8Array(row.pdf_data))) 
+            : row.pdf_data)
+        : undefined
+    };
+  } catch (error) {
+    console.error('[InsuranceReport] Erreur récupération version:', error);
+    return null;
+  }
+}
+
+/**
+ * Sélectionner une version comme version active (pour envoi)
+ */
+export async function selectPdfVersion(
+  reportId: number, 
+  versionId: number,
+  userId: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Désélectionner toutes les versions
+    await query(`
+      UPDATE insurance_report_pdf_versions 
+      SET is_selected = FALSE 
+      WHERE report_id = ?
+    `, [reportId]);
+    
+    // Sélectionner la version choisie
+    await query(`
+      UPDATE insurance_report_pdf_versions 
+      SET is_selected = TRUE 
+      WHERE id = ? AND report_id = ?
+    `, [versionId, reportId]);
+    
+    // Récupérer le PDF de cette version et mettre à jour le rapport principal
+    const version = await getPdfVersion(versionId);
+    if (version && version.pdf_data) {
+      await query(`
+        UPDATE insurance_reports 
+        SET filled_pdf = ?,
+            updated_at = NOW()
+        WHERE id = ?
+      `, [version.pdf_data, reportId]);
+    }
+    
+    await addHistoryEntry(reportId, 'saved_draft', userId, `Version ${versionId} sélectionnée`);
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('[InsuranceReport] Erreur sélection version:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Supprimer une version
+ */
+export async function deletePdfVersion(
+  versionId: number,
+  userId: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Récupérer la version à supprimer
+    const versionResult = await query<any>(`
+      SELECT v.*, 
+        (SELECT COUNT(*) FROM insurance_report_pdf_versions WHERE report_id = v.report_id) AS total_versions
+      FROM insurance_report_pdf_versions v
+      WHERE v.id = ?
+    `, [versionId]);
+    
+    if (!versionResult.data || versionResult.data.length === 0) {
+      return { success: false, error: 'Version non trouvée' };
+    }
+    
+    const version = versionResult.data[0];
+    
+    // Si c'est la version sélectionnée et qu'il y en a d'autres, sélectionner la plus récente
+    if (version.is_selected && version.total_versions > 1) {
+      await query(`
+        UPDATE insurance_report_pdf_versions 
+        SET is_selected = TRUE 
+        WHERE report_id = ? AND id != ?
+        ORDER BY version_number DESC
+        LIMIT 1
+      `, [version.report_id, versionId]);
+      
+      // Mettre à jour le PDF principal avec la nouvelle version sélectionnée
+      const newSelected = await query<any>(`
+        SELECT pdf_data FROM insurance_report_pdf_versions 
+        WHERE report_id = ? AND is_selected = TRUE
+      `, [version.report_id]);
+      
+      if (newSelected.data && newSelected.data[0]) {
+        const pdfData = newSelected.data[0].pdf_data;
+        const base64 = typeof pdfData === "object" 
+          ? btoa(String.fromCharCode(...new Uint8Array(pdfData))) 
+          : pdfData;
+        
+        await query(`
+          UPDATE insurance_reports SET filled_pdf = ? WHERE id = ?
+        `, [base64, version.report_id]);
+      }
+    }
+    
+    // Si c'est la dernière version annotée, remettre le PDF original
+    if (version.total_versions <= 1) {
+      await query(`
+        UPDATE insurance_reports SET filled_pdf = NULL WHERE id = ?
+      `, [version.report_id]);
+    }
+    
+    // Supprimer la version
+    await query(`DELETE FROM insurance_report_pdf_versions WHERE id = ?`, [versionId]);
+    
+    await addHistoryEntry(version.report_id, 'saved_draft', userId, `Version ${version.version_number} supprimée`);
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('[InsuranceReport] Erreur suppression version:', error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -685,10 +929,9 @@ export async function getOsteoList(): Promise<{ id: number; name: string; pendin
         JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.nom'))
       ) AS name,
       (SELECT COUNT(*) FROM insurance_reports ir 
-       WHERE ir.assigned_osteo_id = e.employee_id 
+       WHERE ir.assigned_osteo_id = v.employee_id 
        AND ir.status IN ('assigned', 'in_progress', 'needs_correction')) AS pending_reports
-    FROM employees e
-    WHERE JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
+    FROM v_active_employees v
     ORDER BY name
   `);
 
@@ -699,15 +942,12 @@ export async function getOsteoList(): Promise<{ id: number; name: string; pendin
  * Récupérer la liste des membres de l'accueil pour l'envoi
  */
 export async function getReceptionList(): Promise<{ id: number; name: string }[]> {
+  // Utilise v_active_employees (règle: date_sortie NULL ou future)
   const result = await query<any>(`
     SELECT 
-      e.employee_id as id,
-      CONCAT(
-        JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.prenom')), ' ',
-        JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.nom'))
-      ) AS name
-    FROM employees e
-    WHERE JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
+      v.employee_id as id,
+      CONCAT(v.prenom, ' ', v.nom) AS name
+    FROM v_active_employees v
     ORDER BY name
   `);
 

@@ -109,10 +109,10 @@ const DEFAULT_CERTIFICATIONS: Record<string, string[]> = {
  */
 export async function getReportTeam(): Promise<ReportTeamMember[]> {
   try {
+    // Utilise v_active_employees (règle: date_sortie NULL ou future)
     const result = await query<{ employee_id: number; profile_json: any }>(
       `SELECT employee_id, profile_json 
-       FROM employees 
-       WHERE JSON_UNQUOTE(JSON_EXTRACT(profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
+       FROM v_active_employees
        ORDER BY employee_id`,
       []
     );

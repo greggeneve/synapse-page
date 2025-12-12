@@ -88,12 +88,11 @@ export async function authenticateUser(email: string, password: string): Promise
       return { success: false, error: 'Mot de passe incorrect' };
     }
 
-    // Récupérer le profil complet
+    // Récupérer le profil complet (via v_active_employees pour règle date_sortie)
     const profileResult = await query<any>(`
-      SELECT e.profile_json
-      FROM employees e
-      WHERE e.employee_id = ?
-      AND JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
+      SELECT v.profile_json
+      FROM v_active_employees v
+      WHERE v.employee_id = ?
     `, [account.employee_id]);
 
     if (!profileResult.success || !profileResult.data || profileResult.data.length === 0) {
@@ -202,16 +201,16 @@ export async function loginAsUser(adminUser: AuthUser, targetEmail: string): Pro
 
 // Liste des utilisateurs pour le super admin
 export async function getAvailableUsers(): Promise<{ id: string; email: string; nom: string; prenom: string }[]> {
+  // Utilise v_active_employees (règle: date_sortie NULL ou future)
   const result = await query<any>(`
     SELECT 
       ea.employee_id,
       ea.email,
-      JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.nom')) AS nom,
-      JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.identification.prenom')) AS prenom
+      v.nom,
+      v.prenom
     FROM employee_auth ea
-    JOIN employees e ON ea.employee_id = e.employee_id
-    WHERE JSON_UNQUOTE(JSON_EXTRACT(e.profile_json, '$.hrStatus.collaborateur_actif')) = 'true'
-    ORDER BY nom, prenom
+    JOIN v_active_employees v ON ea.employee_id = v.employee_id
+    ORDER BY v.nom, v.prenom
   `);
 
   if (!result.success || !result.data) return [];
