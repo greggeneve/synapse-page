@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  synapse:
+    build: .
+    container_name: synapse
+    restart: unless-stopped
+    ports:
+      - "3080:80"
+    networks:
+      - poge-network
+
+networks:
+  poge-network:
+    external: true
