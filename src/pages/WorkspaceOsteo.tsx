@@ -6,13 +6,11 @@
  * - Accès rapide aux fiches patients
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
-  Users, 
   Clock, 
-  Bell,
   BellRing,
   Volume2,
   VolumeX,
@@ -23,25 +21,42 @@ import {
   FileText,
   Play,
   CheckCircle,
-  AlertCircle,
   Wifi,
-  WifiOff
+  WifiOff,
+  Banknote,
+  UserCheck,
+  Hourglass,
+  CalendarDays
 } from 'lucide-react';
 import { useWebSocket } from '../services/websocketService';
 import { 
-  getTodayAppointments, 
+  getAppointmentsByDate,
   getCustomerById,
-  formatPatientForDisplay,
-  formatAppointmentTime,
-  isAgendaConfigured,
-  clearCache,
-  type AgendaAppointment,
-  type AgendaCustomer
-} from '../services/agendaService';
+  type DayAppointment
+} from '../services/workspaceAgendaService';
+import { getEmployeeProfile } from '../services/profileService';
+import { 
+  getStatusesByAgenda,
+  startConsultation as dbStartConsultation,
+  endConsultation as dbEndConsultation,
+  updatePatientZone,
+  getPatientZones,
+  type AppointmentStatus,
+  type PatientZone
+} from '../services/appointmentStatusService';
 import type { TeamMember } from '../types';
-import type { WaitingPatient, PatientStatus, ScheduleSlot } from '../types/synapse';
+import type { PatientStatus } from '../types/synapse';
 import { playNotificationSound, initAudioContext } from '../utils/sounds';
+import { CabinetFloorPlan, type ZoneType, type PatientLocation } from '../components/CabinetFloorPlan';
+import { getAppointmentsByDate as getAllAppointments } from '../services/workspaceAgendaService';
+import { markPatientArrived } from '../services/appointmentStatusService';
+import { MapPin } from 'lucide-react';
 import './WorkspaceOsteo.css';
+
+// Extension du type DayAppointment avec status WebSocket
+interface ScheduleSlot extends DayAppointment {
+  status: PatientStatus;
+}
 
 interface WorkspaceOsteoProps {
   user: TeamMember;
@@ -66,42 +81,92 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
   const [lastNotification, setLastNotification] = useState<string | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<{
     appointment: ScheduleSlot;
-    customer: AgendaCustomer | null;
+    customer: { firstName: string; lastName: string; birthdate: string | null; phone: string | null; notes: string | null } | null;
   } | null>(null);
   const [activeConsultation, setActiveConsultation] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [agendaId, setAgendaId] = useState<number | null>(null);
   
-  // Charger le planning du jour
+  // Vue plan du cabinet
+  const [viewMode, setViewMode] = useState<'planning' | 'plan'>('planning');
+  const [allAppointments, setAllAppointments] = useState<DayAppointment[]>([]);
+  const [patientLocations, setPatientLocations] = useState<PatientLocation[]>([]);
+  
+  // Prix moyen par consultation (à configurer)
+  const PRIX_CONSULTATION = 130; // CHF
+  
+  // Charger l'agenda_id de l'employé depuis son profil
+  useEffect(() => {
+    async function loadAgendaId() {
+      try {
+        const profile = await getEmployeeProfile(employeeId);
+        if (profile?.externalIds?.id_externe_agenda) {
+          const id = parseInt(profile.externalIds.id_externe_agenda, 10);
+          if (!isNaN(id)) {
+            setAgendaId(id);
+            console.log('[WorkspaceOsteo] Agenda ID chargé:', id);
+          }
+        }
+      } catch (error) {
+        console.error('[WorkspaceOsteo] Erreur chargement agenda_id:', error);
+      }
+    }
+    loadAgendaId();
+  }, [employeeId]);
+  
+  // Formater la date pour la DB
+  const formatDateForDB = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  // Charger le planning depuis la DB
   const loadSchedule = useCallback(async () => {
+    if (agendaId === null) {
+      // Attendre que l'agenda_id soit chargé
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      // TODO: Mapper l'ID agenda.ch de l'employé
-      const appointments = await getTodayAppointments();
+      const dateStr = formatDateForDB(selectedDate);
       
-      // Convertir en ScheduleSlot
-      const slots: ScheduleSlot[] = await Promise.all(
-        appointments.map(async (apt) => {
-          const customer = await getCustomerById(apt.customer_id);
-          const { displayName, initials } = customer 
-            ? formatPatientForDisplay(customer)
-            : { displayName: 'Patient inconnu', initials: '??' };
-          
-          // Vérifier si le patient est en salle d'attente
-          const waitingPatient = waitingRoom.find(w => w.appointmentId === apt.id);
-          
-          return {
-            appointmentId: apt.id,
-            customerId: apt.customer_id,
-            customerName: displayName,
-            customerInitials: initials,
-            startTime: formatAppointmentTime(apt),
-            endTime: new Date(apt.end_at).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }),
-            duration: apt.duration,
-            status: waitingPatient?.status || (apt.status === 'completed' ? 'completed' : 'scheduled'),
-            hasArrived: !!waitingPatient,
-            notes: apt.notes
-          };
-        })
-      );
+      // Récupérer les RDV depuis la DB pour la date sélectionnée ET l'ostéo
+      const appointments = await getAppointmentsByDate(selectedDate, agendaId);
+      
+      // Récupérer les statuts depuis la table appointment_status
+      const dbStatuses = await getStatusesByAgenda(agendaId, dateStr);
+      
+      // Convertir en ScheduleSlot avec statut DB ou WebSocket
+      const slots: ScheduleSlot[] = appointments.map(apt => {
+        // D'abord vérifier le statut en DB
+        const dbStatus = dbStatuses.find(s => s.appointment_id === apt.appointmentId);
+        
+        // Puis vérifier si le patient est en salle d'attente (via WebSocket temps réel)
+        const waitingPatient = waitingRoom.find(w => w.appointmentId === apt.appointmentId);
+        
+        // Priorité : WebSocket > DB > défaut
+        let status: PatientStatus = apt.status;
+        let hasArrived = apt.hasArrived;
+        
+        if (dbStatus) {
+          status = dbStatus.status as PatientStatus;
+          hasArrived = dbStatus.status !== 'scheduled';
+        }
+        
+        if (waitingPatient) {
+          status = waitingPatient.status;
+          hasArrived = true;
+        }
+        
+        return {
+          ...apt,
+          status,
+          hasArrived
+        };
+      });
       
       setSchedule(slots);
     } catch (error) {
@@ -109,16 +174,99 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [waitingRoom]);
+  }, [selectedDate, agendaId, waitingRoom]);
   
-  // Charger au démarrage
+  // Charger au démarrage et quand la date ou l'agenda change
   useEffect(() => {
-    if (isAgendaConfigured()) {
+    if (agendaId !== null) {
       loadSchedule();
-    } else {
-      setIsLoading(false);
     }
-  }, []);
+  }, [selectedDate, agendaId, loadSchedule]);
+  
+  // Charger tous les RDV et zones pour la vue plan (tous les ostéos)
+  useEffect(() => {
+    if (viewMode === 'plan') {
+      const loadAllAppointments = async () => {
+        try {
+          const dateStr = formatDateForDB(selectedDate);
+          
+          // Charger les RDV
+          const appointments = await getAllAppointments(selectedDate);
+          setAllAppointments(appointments);
+          
+          // Charger les zones depuis la DB
+          const zones = await getPatientZones(dateStr);
+          const locations: PatientLocation[] = zones.map(z => ({
+            odId: z.appointmentId,
+            zone: z.zone as ZoneType
+          }));
+          setPatientLocations(locations);
+          console.log('[WorkspaceOsteo] Zones chargées:', locations.length);
+        } catch (error) {
+          console.error('[WorkspaceOsteo] Erreur chargement RDV plan:', error);
+        }
+      };
+      loadAllAppointments();
+    }
+  }, [viewMode, selectedDate]);
+  
+  // Gestion du déplacement de patient sur le plan
+  const handlePatientMove = async (appointmentId: number, fromZone: ZoneType, toZone: ZoneType) => {
+    // Mettre à jour l'état local immédiatement
+    setPatientLocations(prev => {
+      const existing = prev.find(p => p.odId === appointmentId);
+      if (existing) {
+        return prev.map(p => p.odId === appointmentId ? { ...p, zone: toZone } : p);
+      }
+      return [...prev, { odId: appointmentId, zone: toZone }];
+    });
+
+    // Trouver le RDV pour avoir l'agenda_id
+    const apt = allAppointments.find(a => a.appointmentId === appointmentId);
+    if (!apt) return;
+
+    // Sauvegarder la zone dans la DB
+    try {
+      await updatePatientZone(appointmentId, formatDateForDB(selectedDate), apt.agendaId, toZone as PatientZone, employeeId);
+      console.log(`[WorkspaceOsteo] Zone sauvegardée: ${toZone}`);
+    } catch (error) {
+      console.error('[WorkspaceOsteo] Erreur sauvegarde zone:', error);
+    }
+  };
+  
+  // Navigation de date
+  const goToPreviousDay = () => {
+    setSelectedDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() - 1);
+      return newDate;
+    });
+  };
+  
+  const goToNextDay = () => {
+    setSelectedDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() + 1);
+      return newDate;
+    });
+  };
+  
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+  
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+  
+  const formatSelectedDate = () => {
+    if (isToday) {
+      return "Aujourd'hui";
+    }
+    return selectedDate.toLocaleDateString('fr-CH', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long' 
+    });
+  };
   
   // Mettre à jour le planning quand la salle d'attente change
   useEffect(() => {
@@ -156,13 +304,29 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
   // Ouvrir la fiche patient
   const openPatientCard = async (slot: ScheduleSlot) => {
     const customer = await getCustomerById(slot.customerId);
-    setSelectedPatient({ appointment: slot, customer });
+    setSelectedPatient({ 
+      appointment: slot, 
+      customer: customer ? {
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        birthdate: customer.birthdate,
+        phone: customer.phone,
+        notes: customer.notes
+      } : null
+    });
   };
   
   // Démarrer une consultation
-  const handleStartConsultation = (appointmentId: number) => {
+  const handleStartConsultation = async (appointmentId: number) => {
+    // Mettre à jour via WebSocket (temps réel)
     startConsultation(appointmentId);
     setActiveConsultation(appointmentId);
+    
+    // Mettre à jour en DB
+    const dateStr = formatDateForDB(selectedDate);
+    if (agendaId) {
+      await dbStartConsultation(appointmentId, dateStr, agendaId, employeeId);
+    }
     
     // Mettre à jour le statut local
     setSchedule(prev => prev.map(slot => 
@@ -173,9 +337,14 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
   };
   
   // Terminer une consultation
-  const handleEndConsultation = (appointmentId: number) => {
+  const handleEndConsultation = async (appointmentId: number) => {
+    // Mettre à jour via WebSocket
     endConsultation(appointmentId);
     setActiveConsultation(null);
+    
+    // Mettre à jour en DB
+    const dateStr = formatDateForDB(selectedDate);
+    await dbEndConsultation(appointmentId, dateStr, employeeId);
     
     // Mettre à jour le statut local
     setSchedule(prev => prev.map(slot => 
@@ -185,13 +354,43 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
     ));
   };
   
-  // Patients en attente pour cet ostéo
-  const myWaitingPatients = waitingRoom.filter(p => p.assignedTo === employeeId);
-  
   // Heure actuelle pour le timeline
   const now = new Date();
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
+  
+  // Statistiques de la journée
+  const dayStats = useMemo(() => {
+    // Patients à venir (pas encore vus, heure de RDV dans le futur ou en attente)
+    const upcoming = schedule.filter(s => 
+      s.status === 'scheduled' || s.status === 'arrived'
+    );
+    
+    // Patients en salle d'attente
+    const waiting = schedule.filter(s => s.status === 'waiting');
+    
+    // Patients en consultation
+    const inProgress = schedule.filter(s => s.status === 'in_progress');
+    
+    // Consultations terminées
+    const completed = schedule.filter(s => s.status === 'completed');
+    
+    // CA du jour (consultations terminées * prix)
+    const caJour = completed.length * PRIX_CONSULTATION;
+    
+    // CA potentiel (tous les RDV du jour)
+    const caPotentiel = schedule.length * PRIX_CONSULTATION;
+    
+    return {
+      upcoming,
+      waiting,
+      inProgress,
+      completed,
+      caJour,
+      caPotentiel,
+      totalPatients: schedule.length
+    };
+  }, [schedule, PRIX_CONSULTATION]);
   
   // Couleur selon le statut
   const getStatusColor = (status: PatientStatus): string => {
@@ -236,8 +435,27 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
           </button>
           <div className="header-title">
             <h1>Mon espace de travail</h1>
-            <p>{new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
+          
+        </div>
+        
+        {/* Navigation de date */}
+        <div className="date-navigator">
+          <button className="btn-nav" onClick={goToPreviousDay} title="Jour précédent">
+            <ChevronLeft size={20} />
+          </button>
+          <div className="date-display" onClick={goToToday} title="Revenir à aujourd'hui">
+            <CalendarDays size={18} />
+            <span className={`date-text ${isToday ? 'today' : ''}`}>
+              {formatSelectedDate()}
+            </span>
+            {!isToday && (
+              <span className="date-year">{selectedDate.getFullYear()}</span>
+            )}
+          </div>
+          <button className="btn-nav" onClick={goToNextDay} title="Jour suivant">
+            <ChevronRight size={20} />
+          </button>
         </div>
         
         <div className="header-right">
@@ -259,77 +477,195 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
           {/* Rafraîchir */}
           <button 
             className="btn-refresh"
-            onClick={() => { clearCache(); loadSchedule(); }}
+            onClick={() => loadSchedule()}
             disabled={isLoading}
-            title="Rafraîchir le planning"
+            title="Rafraîchir depuis la DB"
           >
             <RefreshCw size={20} className={isLoading ? 'spin' : ''} />
           </button>
         </div>
       </header>
       
+      {/* Barre d'onglets */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        padding: '12px 20px',
+        background: 'white',
+        borderBottom: '1px solid #e2e8f0',
+      }}>
+        <button
+          onClick={() => setViewMode('planning')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            background: viewMode === 'planning' ? '#3b82f6' : '#f1f5f9',
+            color: viewMode === 'planning' ? 'white' : '#64748b',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          <Calendar size={18} /> Mon Planning
+        </button>
+        <button
+          onClick={() => setViewMode('plan')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            background: viewMode === 'plan' ? '#3b82f6' : '#f1f5f9',
+            color: viewMode === 'plan' ? 'white' : '#64748b',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          <MapPin size={18} /> Vue Cabinet
+        </button>
+      </div>
+      
       {/* Contenu principal */}
+      {viewMode === 'planning' ? (
       <div className="workspace-content">
-        {/* Panneau salle d'attente */}
-        <aside className="waiting-room-panel">
-          <div className="panel-header">
-            <h2>
-              {myWaitingPatients.some(p => p.status === 'waiting') ? (
-                <BellRing size={20} className="bell-ringing" />
-              ) : (
-                <Bell size={20} />
-              )}
-              Salle d'attente
-            </h2>
-            <span className="badge">{myWaitingPatients.length}</span>
+        {/* Panneau vue journée */}
+        <aside className="day-overview-panel">
+          {/* Barre CA compacte */}
+          <div className="ca-bar">
+            <div className="ca-info">
+              <Banknote size={16} />
+              <span className="ca-amount">{dayStats.caJour} CHF</span>
+              <span className="ca-potential">/ {dayStats.caPotentiel}</span>
+            </div>
+            <div className="ca-progress">
+              <div 
+                className="ca-progress-fill" 
+                style={{ width: `${dayStats.caPotentiel > 0 ? (dayStats.caJour / dayStats.caPotentiel) * 100 : 0}%` }}
+              />
+            </div>
           </div>
           
-          <div className="waiting-list">
-            {myWaitingPatients.length === 0 ? (
-              <div className="empty-state">
-                <Users size={32} />
-                <p>Aucun patient en attente</p>
-              </div>
-            ) : (
-              myWaitingPatients.map(patient => (
-                <div 
-                  key={patient.appointmentId}
-                  className={`waiting-patient ${patient.status === 'waiting' ? 'pulse' : ''}`}
-                  onClick={() => {
-                    const slot = schedule.find(s => s.appointmentId === patient.appointmentId);
-                    if (slot) openPatientCard(slot);
-                  }}
-                >
-                  <div className="patient-avatar">
-                    {patient.customerInitials}
-                  </div>
-                  <div className="patient-info">
-                    <div className="patient-name">{patient.customerName}</div>
-                    <div className="patient-time">
-                      <Clock size={12} />
-                      RDV {patient.scheduledTime} • Arrivé {new Date(patient.arrivedAt).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                  <div className={`patient-status ${getStatusColor(patient.status)}`}>
-                    {patient.status === 'waiting' && (
+          {/* Liste continue scrollable */}
+          <div className="day-timeline">
+            {/* Section EN ATTENTE - toujours visible en premier si patients */}
+            {(dayStats.waiting.length > 0 || dayStats.inProgress.length > 0) && (
+              <div className="timeline-section waiting-section">
+                <div className="section-header alert">
+                  <BellRing size={14} className={dayStats.waiting.length > 0 ? 'bell-ringing' : ''} />
+                  <span>En attente</span>
+                  <span className="section-count">{dayStats.waiting.length + dayStats.inProgress.length}</span>
+                </div>
+                
+                {dayStats.waiting.map(slot => (
+                    <div 
+                      key={slot.appointmentId}
+                      className="timeline-patient waiting"
+                      onClick={() => openPatientCard(slot)}
+                    >
+                      <div className="tp-time">{slot.startTime}</div>
+                      <div className="tp-avatar pulse-avatar">{slot.customerInitials}</div>
+                      <div className="tp-name">{slot.customerName}</div>
                       <button 
-                        className="btn-start"
+                        className="btn-go"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleStartConsultation(patient.appointmentId);
+                          handleStartConsultation(slot.appointmentId);
                         }}
                       >
-                        <Play size={14} /> Démarrer
+                        <Play size={12} />
                       </button>
-                    )}
-                    {patient.status === 'in_progress' && (
-                      <span className="in-progress-badge">
-                        <span className="dot"></span> En cours
-                      </span>
-                    )}
+                    </div>
+                  ))}
+                
+                {dayStats.inProgress.map(slot => (
+                  <div 
+                    key={slot.appointmentId}
+                    className="timeline-patient in-progress"
+                    onClick={() => openPatientCard(slot)}
+                  >
+                    <div className="tp-time">{slot.startTime}</div>
+                    <div className="tp-avatar active">{slot.customerInitials}</div>
+                    <div className="tp-name">{slot.customerName}</div>
+                    <div className="tp-status">
+                      <span className="dot"></span>
+                    </div>
+                    <button 
+                      className="btn-done"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEndConsultation(slot.appointmentId);
+                      }}
+                    >
+                      <CheckCircle size={12} />
+                    </button>
                   </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Section À VOIR */}
+            {dayStats.upcoming.length > 0 && (
+              <div className="timeline-section upcoming-section">
+                <div className="section-header">
+                  <Hourglass size={14} />
+                  <span>À voir</span>
+                  <span className="section-count">{dayStats.upcoming.length}</span>
                 </div>
-              ))
+                
+                {dayStats.upcoming.map(slot => (
+                  <div 
+                    key={slot.appointmentId}
+                    className="timeline-patient upcoming"
+                    onClick={() => openPatientCard(slot)}
+                  >
+                    <div className="tp-time">{slot.startTime}</div>
+                    <div className="tp-avatar">{slot.customerInitials}</div>
+                    <div className="tp-name">{slot.customerName}</div>
+                    <div className="tp-duration">{slot.duration}'</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Section TERMINÉS */}
+            {dayStats.completed.length > 0 && (
+              <div className="timeline-section completed-section">
+                <div className="section-header success">
+                  <UserCheck size={14} />
+                  <span>Vus</span>
+                  <span className="section-count">{dayStats.completed.length}</span>
+                </div>
+                
+                {dayStats.completed.map(slot => (
+                  <div 
+                    key={slot.appointmentId}
+                    className="timeline-patient completed"
+                    onClick={() => openPatientCard(slot)}
+                  >
+                    <div className="tp-time">{slot.startTime}</div>
+                    <div className="tp-avatar done"><CheckCircle size={14} /></div>
+                    <div className="tp-name">{slot.customerName}</div>
+                    <div className="tp-price">{PRIX_CONSULTATION} CHF</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* État vide */}
+            {schedule.length === 0 && !isLoading && (
+              <div className="empty-state">
+                <Calendar size={32} />
+                <p>Aucun rendez-vous aujourd'hui</p>
+              </div>
             )}
           </div>
         </aside>
@@ -341,13 +677,7 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
             <span className="appointments-count">{schedule.length} rendez-vous</span>
           </div>
           
-          {!isAgendaConfigured() ? (
-            <div className="config-warning">
-              <AlertCircle size={24} />
-              <p>API agenda.ch non configurée</p>
-              <small>Ajoutez VITE_AGENDA_API_TOKEN dans .env.local</small>
-            </div>
-          ) : isLoading ? (
+          {isLoading ? (
             <div className="loading-state">
               <RefreshCw size={32} className="spin" />
               <p>Chargement du planning...</p>
@@ -435,6 +765,17 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
           )}
         </main>
       </div>
+      ) : (
+        /* Vue Plan du Cabinet */
+        <div className="workspace-content" style={{ padding: '20px', background: '#f1f5f9' }}>
+          <CabinetFloorPlan
+            appointments={allAppointments}
+            patientLocations={patientLocations}
+            onPatientMove={handlePatientMove}
+            canConfigure={user.isSuperAdmin}
+          />
+        </div>
+      )}
       
       {/* Modal fiche patient */}
       {selectedPatient && (
@@ -457,7 +798,14 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
                       {selectedPatient.customer.birthdate && (
                         <p className="patient-birth">
                           Né(e) le {new Date(selectedPatient.customer.birthdate).toLocaleDateString('fr-CH')}
-                          {' '}({formatPatientForDisplay(selectedPatient.customer).age} ans)
+                          {' '}({(() => {
+                            const birth = new Date(selectedPatient.customer.birthdate!);
+                            const today = new Date();
+                            let age = today.getFullYear() - birth.getFullYear();
+                            const m = today.getMonth() - birth.getMonth();
+                            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+                            return age;
+                          })()} ans)
                         </p>
                       )}
                       {selectedPatient.customer.phone && (
@@ -468,10 +816,10 @@ export function WorkspaceOsteo({ user }: WorkspaceOsteoProps) {
                 </div>
               </div>
               
-              {selectedPatient.customer?.notes && (
+              {(selectedPatient.customer?.notes || selectedPatient.appointment.customerNotes) && (
                 <div className="patient-notes">
                   <h5>Antécédents / Notes</h5>
-                  <p>{selectedPatient.customer.notes}</p>
+                  <p>{selectedPatient.customer?.notes || selectedPatient.appointment.customerNotes}</p>
                 </div>
               )}
               

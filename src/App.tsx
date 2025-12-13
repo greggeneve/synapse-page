@@ -1,12 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { Dashboard } from './pages/Dashboard';
+import { getClientIp, takeLocationControl, updateOsteoLocation } from './services/osteoLocationService';
+import { getEmployeeProfile } from './services/profileService';
+
+// Générer un ID de session unique pour cette instance
+const SESSION_ID = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 import { ProReports } from './pages/ProReports';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminSettings } from './pages/AdminSettings';
 import { WorkspaceOsteo } from './pages/WorkspaceOsteo';
+import { AccueilWorkspace } from './pages/AccueilWorkspace';
 import { Planning } from './pages/Planning';
 import { ConsultationPage } from './pages/ConsultationPage';
 import { DemoConsultation } from './pages/DemoConsultation';
@@ -19,6 +25,7 @@ import { InsuranceReportsReview } from './pages/InsuranceReportsReview';
 import { InsuranceReportsUpload } from './pages/InsuranceReportsUpload';
 import { InsuranceReportsDashboard } from './pages/InsuranceReportsDashboard';
 import { InsuranceReportDetail } from './pages/InsuranceReportDetail';
+import FloorPlanSettings from './pages/FloorPlanSettings';
 import type { TeamMember } from './types';
 import './App.css';
 
@@ -39,6 +46,56 @@ function App() {
     setIsLoading(false);
   }, []);
 
+  // Mettre à jour la localisation de l'ostéo basée sur l'IP (sur toutes les pages)
+  const [locationInitialized, setLocationInitialized] = useState(false);
+  
+  const updateLocation = useCallback(async (isFirstCall: boolean = false) => {
+    if (!user) return;
+    
+    try {
+      const employeeId = typeof user.id === 'string' ? parseInt(user.id, 10) : Number(user.id);
+      const profile = await getEmployeeProfile(employeeId);
+      
+      if (profile?.externalIds?.id_externe_agenda) {
+        const agendaId = parseInt(profile.externalIds.id_externe_agenda, 10);
+        if (!isNaN(agendaId)) {
+          const ip = await getClientIp();
+          if (ip) {
+            let roomId: string | null;
+            if (isFirstCall) {
+              // Premier appel : prendre le contrôle (nouvelle session)
+              roomId = await takeLocationControl(employeeId, agendaId, ip, SESSION_ID);
+              console.log(`[App] Nouvelle session ${SESSION_ID.slice(0, 8)}: IP=${ip}, salle=${roomId || 'inconnue'}`);
+            } else {
+              // Appels suivants : mettre à jour si c'est notre session
+              roomId = await updateOsteoLocation(employeeId, agendaId, ip, SESSION_ID);
+              if (roomId) {
+                console.log(`[App] Position mise à jour: IP=${ip}, salle=${roomId}`);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[App] Erreur mise à jour localisation:', error);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    // Premier appel : prendre le contrôle
+    if (!locationInitialized) {
+      updateLocation(true);
+      setLocationInitialized(true);
+    }
+    
+    // Puis toutes les 2 minutes
+    const interval = setInterval(() => updateLocation(false), 2 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [user, updateLocation, locationInitialized]);
+
   const handleLogin = (loggedUser: TeamMember) => {
     setUser(loggedUser);
     localStorage.setItem('poge_user', JSON.stringify(loggedUser));
@@ -52,7 +109,7 @@ function App() {
   if (isLoading) {
     return (
       <div className="loading-screen">
-        <img src="/logo-poge.png" alt="POGE" className="loading-logo" />
+        <img src="/logo-synapse.png" alt="Synapse" className="loading-logo synapse" />
         <div className="loading-spinner" />
       </div>
     );
@@ -100,6 +157,14 @@ function App() {
           path="/pro/workspace" 
           element={
             user ? <WorkspaceOsteo user={user} /> : <Navigate to="/login" replace />
+          } 
+        />
+
+        {/* Espace Accueil - Gestion des arrivées */}
+        <Route 
+          path="/reception/workspace" 
+          element={
+            user ? <AccueilWorkspace user={user} /> : <Navigate to="/login" replace />
           } 
         />
 
@@ -188,6 +253,14 @@ function App() {
           path="/admin/settings" 
           element={
             user?.isSuperAdmin ? <AdminSettings /> : <Navigate to="/dashboard" replace />
+          } 
+        />
+
+        {/* Admin - Configuration Plan Cabinet */}
+        <Route 
+          path="/admin/floor-plan" 
+          element={
+            user?.isSuperAdmin ? <FloorPlanSettings /> : <Navigate to="/dashboard" replace />
           } 
         />
 

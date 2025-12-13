@@ -214,6 +214,11 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
             <p className="current-date">{today}</p>
           </div>
         </div>
+
+        {/* Logo Synapse au centre */}
+        <div className="header-logo">
+          <img src="/logo-synapse.png" alt="Synapse" className="dashboard-logo" />
+        </div>
         
         <div className="header-actions">
           {user.isSuperAdmin && (
@@ -234,6 +239,8 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
               <Settings size={20} />
             </button>
           )}
+          {/* Icône Notifications */}
+          <NotificationBell userId={parseInt(user.id)} />
           {/* Icône Mail */}
           <button 
             className={`btn-icon-header mail ${mailCredentials ? '' : 'disabled'}`}
@@ -247,7 +254,6 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
             {unreadMailCount > 0 && (
               <span className="notification-badge mail-badge">{unreadMailCount > 99 ? '99+' : unreadMailCount}</span>
             )}
-          <NotificationBell userId={parseInt(user.id)} />
           </button>
           <button 
             className="btn-icon-header logout" 
@@ -553,9 +559,22 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
           {/* ═══════════ MODE ACCUEIL/RÉCEPTION ═══════════ */}
           {isReceptionStaff && !hasRme && !hasDirectionRole && (
             <div className="section-cards reception-cards">
-              {/* Rapports d'assurance - Dépôt & Suivi */}
+              {/* Espace Accueil - Gestion des arrivées */}
               <button 
                 className="dashboard-card highlight primary reception-card"
+                onClick={() => navigate('/reception/workspace')}
+              >
+                <UserCheck size={20} />
+                <div className="card-content">
+                  <h3>Espace Accueil</h3>
+                  <p>Arrivées patients</p>
+                </div>
+                <ChevronRight size={18} className="card-arrow" />
+              </button>
+
+              {/* Rapports d'assurance - Dépôt & Suivi */}
+              <button 
+                className="dashboard-card highlight reception-card"
                 onClick={() => navigate('/insurance-reports')}
               >
                 <FileBarChart size={20} />
@@ -789,6 +808,7 @@ export function Dashboard({ user, onUserChange, onLogout }: DashboardProps) {
           }
         }}
         credentials={mailCredentials}
+        employeeId={parseInt(user.id)}
         employeeInfo={{
           prenom: user.prenom,
           nom: user.nom,

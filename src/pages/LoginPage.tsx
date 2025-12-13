@@ -90,11 +90,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       </div>
 
       <div className="login-container">
-        {/* Logo et titre */}
+        {/* Logo Synapse */}
         <div className="login-header">
-          <img src="/logo-poge.png" alt="POGE" className="login-logo" />
-          <h1>Espace Collaborateurs</h1>
-          <p>Permanence Ostéopathique de Genève</p>
+          <img src="/logo-synapse.png" alt="Synapse" className="login-logo synapse-logo" />
+          <h1>Synapse</h1>
+          <p>Espace Collaborateurs</p>
         </div>
 
         {/* Formulaire */}
@@ -197,8 +197,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           </form>
         )}
 
-        {/* Footer */}
+        {/* Footer avec logo POGE */}
         <div className="login-footer">
+          <img src="/logo-poge.png" alt="POGE" className="footer-logo" />
           <p>© 2025 POGE SA - Tous droits réservés</p>
         </div>
       </div>

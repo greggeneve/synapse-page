@@ -1,0 +1,446 @@
+/* AccueilWorkspace.css - Espace Accueil */
+
+.accueil-workspace {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  color: #1e293b;
+}
+
+/* Header */
+.accueil-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.accueil-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.accueil-header .btn-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.accueil-header .btn-back:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.accueil-header .header-title h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: #1e293b;
+}
+
+.accueil-header .header-title p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.accueil-header .btn-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.accueil-header .btn-refresh:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.accueil-header .btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Stats bar */
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  padding: 16px 24px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.stat-item svg {
+  color: #64748b;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.stat-item.pending {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.stat-item.pending svg { color: #d97706; }
+.stat-item.pending .stat-value { color: #92400e; }
+
+.stat-item.arrived {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.stat-item.arrived svg { color: #2563eb; }
+.stat-item.arrived .stat-value { color: #1e40af; }
+
+.stat-item.in-progress {
+  background: #e0e7ff;
+  border-color: #6366f1;
+}
+
+.stat-item.in-progress svg { color: #4f46e5; }
+.stat-item.in-progress .stat-value { color: #3730a3; }
+
+.stat-item.completed {
+  background: #d1fae5;
+  border-color: #10b981;
+}
+
+.stat-item.completed svg { color: #059669; }
+.stat-item.completed .stat-value { color: #065f46; }
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 24px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.filter-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+/* Appointments list */
+.appointments-list {
+  padding: 16px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.appointment-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.appointment-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.appointment-card.status-arrived {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.appointment-card.status-in_progress {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+}
+
+.appointment-card.status-completed {
+  background: #f0fdf4;
+  border-color: #86efac;
+  opacity: 0.7;
+}
+
+.appointment-card.status-no_show {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  opacity: 0.6;
+}
+
+.apt-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+
+.apt-time .time {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.apt-time .duration {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.apt-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+}
+
+.apt-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.apt-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apt-praticien {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.apt-arrived-time {
+  font-size: 0.75rem;
+  color: #3b82f6;
+  margin-top: 4px;
+}
+
+.apt-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-badge.scheduled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.status-badge.arrived {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.status-badge.in-progress {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.status-badge.completed {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.status-badge.no-show {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.apt-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.apt-actions .btn-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.apt-actions .btn-action.arrived {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.apt-actions .btn-action.arrived:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+.apt-actions .btn-action.no-show {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.apt-actions .btn-action.no-show:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.apt-actions .btn-action.cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.apt-actions .btn-action.cancel:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+/* Loading & Empty states */
+.loading-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #64748b;
+  text-align: center;
+}
+
+.loading-state svg, .empty-state svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-bar {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+  
+  .stat-item {
+    padding: 8px 12px;
+  }
+  
+  .stat-label {
+    display: none;
+  }
+  
+  .appointments-list {
+    padding: 12px 16px;
+  }
+  
+  .appointment-card {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+  
+  .apt-info {
+    flex: 1 1 100%;
+    order: 1;
+    margin-top: 8px;
+  }
+  
+  .apt-status {
+    order: 2;
+  }
+  
+  .apt-actions {
+    order: 3;
+    margin-left: auto;
+  }
+}
+
+/* Spin animation */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

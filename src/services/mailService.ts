@@ -109,9 +109,9 @@ export interface MailApiResponse<T = any> {
 // ============================================================================
 
 const getMailApiEndpoint = () => {
-  // Appeler directement l'API PHP sans passer par le proxy Vite
-  // pour éviter les problèmes de réponses vides
-  const phpApiUrl = import.meta.env.VITE_PHP_API_URL || 'http://10.10.10.140:8081/php-api.php';
+  // En production, utilise le proxy /api/
+  // En dev, utilise VITE_PHP_API_URL si défini
+  const phpApiUrl = import.meta.env.VITE_PHP_API_URL || '/api/php-api.php';
   return phpApiUrl.replace(/php-api\.php$/, 'mail-api.php');
 };
 

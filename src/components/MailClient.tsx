@@ -59,6 +59,7 @@ import {
   htmlToText,
   parseEmailAddresses
 } from '../services/mailService';
+import { getPreference, setPreference, PREFERENCE_KEYS } from '../services/userPreferencesService';
 import './MailClient.css';
 
 // ============================================================================
@@ -69,6 +70,7 @@ interface MailClientProps {
   isOpen: boolean;
   onClose: () => void;
   credentials: EmailCredentials | null;
+  employeeId: number;
   employeeInfo: {
     prenom: string;
     nom: string;
@@ -124,6 +126,7 @@ export function MailClient({
   isOpen,
   onClose,
   credentials,
+  employeeId,
   employeeInfo
 }: MailClientProps) {
   // État principal
@@ -211,30 +214,45 @@ export function MailClient({
     }
   }, [signatureTemplate, employeeInfo, credentials]);
 
-  // Initialiser l'ordre des dossiers
+  // Initialiser l'ordre des dossiers depuis la DB
   useEffect(() => {
-    if (folders.length > 0 && folderOrder.length === 0) {
-      // Charger l'ordre depuis localStorage ou utiliser l'ordre par défaut
-      const savedOrder = localStorage.getItem('mailFolderOrder');
-      if (savedOrder) {
-        const parsed = JSON.parse(savedOrder);
-        // Fusionner avec les nouveaux dossiers
-        const existingPaths = new Set(folders.map(f => f.path));
-        const validOrder = parsed.filter((p: string) => existingPaths.has(p));
-        const newFolders = folders.filter(f => !validOrder.includes(f.path)).map(f => f.path);
-        setFolderOrder([...validOrder, ...newFolders]);
-      } else {
+    if (folders.length > 0 && folderOrder.length === 0 && employeeId) {
+      // Charger l'ordre depuis la base de données
+      getPreference<string[]>(employeeId, PREFERENCE_KEYS.MAIL_FOLDER_ORDER).then(savedOrder => {
+        if (savedOrder && Array.isArray(savedOrder)) {
+          // Fusionner avec les nouveaux dossiers
+          const existingPaths = new Set(folders.map(f => f.path));
+          const validOrder = savedOrder.filter((p: string) => existingPaths.has(p));
+          const newFolders = folders.filter(f => !validOrder.includes(f.path)).map(f => f.path);
+          setFolderOrder([...validOrder, ...newFolders]);
+        } else {
+          setFolderOrder(folders.map(f => f.path));
+        }
+      }).catch(() => {
+        // Fallback sur l'ordre par défaut en cas d'erreur
         setFolderOrder(folders.map(f => f.path));
-      }
+      });
     }
-  }, [folders]);
+  }, [folders, employeeId]);
 
-  // Sauvegarder l'ordre des dossiers
+  // Sauvegarder l'ordre des dossiers dans la DB
+  const saveFolderOrderRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
-    if (folderOrder.length > 0) {
-      localStorage.setItem('mailFolderOrder', JSON.stringify(folderOrder));
+    if (folderOrder.length > 0 && employeeId) {
+      // Debounce pour éviter trop de requêtes
+      if (saveFolderOrderRef.current) {
+        clearTimeout(saveFolderOrderRef.current);
+      }
+      saveFolderOrderRef.current = setTimeout(() => {
+        setPreference(employeeId, PREFERENCE_KEYS.MAIL_FOLDER_ORDER, folderOrder);
+      }, 500);
     }
-  }, [folderOrder]);
+    return () => {
+      if (saveFolderOrderRef.current) {
+        clearTimeout(saveFolderOrderRef.current);
+      }
+    };
+  }, [folderOrder, employeeId]);
 
   // Raccourcis clavier
   useEffect(() => {

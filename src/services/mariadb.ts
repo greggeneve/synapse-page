@@ -9,17 +9,11 @@ export async function query<T = any>(
   sql: string,
   params: any[] = []
 ): Promise<QueryResult<T>> {
-  const isDev = import.meta.env.DEV;
   const configuredEndpoint = import.meta.env.VITE_PHP_API_URL;
   
-  const endpoint = isDev ? '/api/php-api.php' : configuredEndpoint;
-
-  if (!endpoint && !isDev) {
-    return {
-      success: false,
-      error: "VITE_PHP_API_URL non défini dans .env.local",
-    };
-  }
+  // Utilise l'endpoint configuré, ou /api/php-api.php par défaut
+  // (nginx en prod fait le proxy /api/ → serveur PHP)
+  const endpoint = configuredEndpoint || '/api/php-api.php';
 
   try {
     const res = await fetch(endpoint, {

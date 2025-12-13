@@ -11,7 +11,8 @@ import {
   Clock,
   Calendar,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  MapPin
 } from 'lucide-react';
 import { 
   getReportSettings, 
@@ -251,6 +252,13 @@ export function AdminSettings() {
         >
           <Scale size={18} />
           Règles RH & Légales
+        </button>
+        <button 
+          className={`settings-tab ${activeTab === 'floor-plan' ? 'active' : ''}`}
+          onClick={() => navigate('/admin/floor-plan')}
+        >
+          <MapPin size={18} />
+          Plan du cabinet
         </button>
       </div>
 
